@@ -1,3 +1,5 @@
+#payment-service/ docker-compose.yml
+
 services:
   payment:
     image: ssrabw/msa-payment:latest
