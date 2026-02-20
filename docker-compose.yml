@@ -1,0 +1,20 @@
+services:
+  payment:
+    image: ssrabw/msa-payment:latest
+    container_name: payment-service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://34.158.208.117:5432/msa_core_db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_RABBITMQ_HOST: 34.158.208.117
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+    networks:
+      - msa-network
+
+networks:
+  msa-network:
+    external: true  # 서버에 미리 만들어둔 공통 네트워크 사용
