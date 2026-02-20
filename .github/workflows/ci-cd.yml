@@ -2,7 +2,7 @@ name: Payment Service CI/CD
 
 on:
   push:
-    branches: [ master ] # 브랜치 이름을 master로 변경
+    branches: [ main ] # 내 브랜치가 main이면 main, master면 master로 수정!
 
 jobs:
   build-and-deploy:
@@ -16,7 +16,7 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # [추가] 1. JAR 파일 빌드
+      # [추가] 1. JAR 파일 빌드 (이게 있어야 이미지를 만듦)
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
@@ -41,10 +41,10 @@ jobs:
         with:
           host: 34.50.60.193
           username: oksm1003
-          key: ${{ secrets.GCP_KEY }} # Secret 이름 GCP_KEY로 확인됨
+          key: ${{ secrets.GCP_KEY }}
           script: |
             cd /home/oksm1003/payment 
-            git pull origin master # 여기도 master로 변경
+            git pull origin main # 여기도 내 브랜치 이름이랑 맞춰야 함
             
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
             echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
