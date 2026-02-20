@@ -2,7 +2,7 @@ name: Payment Service CI/CD
 
 on:
   push:
-    branches: [ main ] # 내 브랜치가 main이면 main, master면 master로 수정!
+    branches: [ master ] # master 브랜치에 푸시되거나 머지될 때만 실행
 
 jobs:
   build-and-deploy:
@@ -16,20 +16,20 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # [추가] 1. JAR 파일 빌드 (이게 있어야 이미지를 만듦)
+      # 1. JAR 파일 빌드 (Gradle 사용)
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
           ./gradlew clean bootJar
 
-      # [추가] 2. Docker Hub 로그인
+      # 2. Docker Hub 로그인
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # [추가] 3. Docker 이미지 빌드 및 푸시
+      # 3. Docker 이미지 빌드 및 푸시
       - name: Build and Push Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/msa-payment:latest .
@@ -43,9 +43,15 @@ jobs:
           username: oksm1003
           key: ${{ secrets.GCP_KEY }}
           script: |
+            # payment 폴더로 이동 (없으면 에러 방지용 체크 필요할 수 있음)
             cd /home/oksm1003/payment 
-            git pull origin main # 여기도 내 브랜치 이름이랑 맞춰야 함
             
+            # 서버 브랜치를 master로 전환하고 최신 코드 가져오기
+            git fetch origin
+            git checkout master || git checkout -b master
+            git pull origin master
+            
+            # .env 파일 생성 (환경 변수 설정)
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
             echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
@@ -53,6 +59,9 @@ jobs:
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
             echo "TZ=Asia/Seoul" >> .env
             
+            # 컨테이너 갱신 및 실행
             docker compose pull
             docker compose up -d
+            
+            # 사용하지 않는 오래된 이미지 삭제 (용량 확보)
             docker image prune -f
