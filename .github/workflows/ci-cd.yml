@@ -21,7 +21,7 @@ jobs:
         with:
           host: 34.50.60.193
           username: oksm1003
-          key: ${{ secrets.GCP_SSH_S2_KEY }}
+          key: ${{ secrets.GCP_KEY }}
           script: |
             # 1. payment 폴더로 이동 및 코드 업데이트
             cd /home/oksm1003/payment 
@@ -29,8 +29,8 @@ jobs:
             
             # 2. .env 파일 자동 생성 [cite: 2026-02-11]
             echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
-            echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+            echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
+            echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
             echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
             echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
             echo "TZ=Asia/Seoul" >> .env
