@@ -52,15 +52,7 @@ jobs:
             git fetch origin
             git checkout master || git checkout -b master
             git pull origin master
-            
-            # .env 파일 생성 (환경 변수 설정)
-            echo "DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}" > .env
-            echo "DB_USER=${{ secrets.POSTGRES_USER }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-            echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
-            echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
-            echo "TZ=Asia/Seoul" >> .env
-            
+
             # 컨테이너 갱신 및 실행
             docker compose pull
             docker compose up -d
