@@ -1,3 +1,5 @@
+#payment-service/ docker-compose.yml
+
 services:
   payment:
     image: ssrabw/msa-payment:latest
@@ -14,10 +16,9 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
 	  
 	  # Redis 연결 정보
-	  SPRING_DATA_REDIS_HOST: msa-redis
-	  SPRING_DATA_REDIS_PORT: 6379
-	  
-    networks:
+  SPRING_DATA_REDIS_HOST: msa-redis
+  SPRING_DATA_REDIS_PORT: 6379
+  networks:
       - msa-network
 
 networks:
