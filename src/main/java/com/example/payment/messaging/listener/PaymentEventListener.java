@@ -1,4 +1,4 @@
-package com.example.payment.service;
+package com.example.payment.messaging.listener;
 // service/PaymentEventListener.java
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
