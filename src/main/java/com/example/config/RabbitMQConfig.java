@@ -1,5 +1,5 @@
 // config/RabbitMQConfig.java
-package com.example.payment.config;
+package com.example.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
