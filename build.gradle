@@ -28,9 +28,8 @@ dependencies {
 	// 래빗
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	
-	// [WEB & SECURITY] - 기본 웹 설정과 보안 필터링
-	implementation 'org.springframework.boot:spring-boot-starter-web'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// [WEB] - 기본 웹 설정과 보안 필터링
+	implementation 'org.springframework.boot:spring-boot-starter-web'	
 	
 	// [DB] - 2서버 전용 DB
 	implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.5'
