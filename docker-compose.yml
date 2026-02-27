@@ -1,23 +1,26 @@
+#payment-service/ docker-compose.yml
+
 services:
   payment:
     image: ssrabw/msa-payment:latest
     container_name: payment-service
     restart: always
     ports:
-      - "8081:8080"
+      - "8083:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://34.158.208.117:5432/msa_core_db
-      DB_USER: ${DB_USER}
-      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://34.158.208.117:5432/msa_pay_db?currentSchema=pay
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       SPRING_RABBITMQ_HOST: 34.158.208.117
+      RABBITMQ_PORT: ${RABBITMQ_PORT}
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      
 	  
 	  # Redis 연결 정보
-	  SPRING_DATA_REDIS_HOST: msa-redis
-	  SPRING_DATA_REDIS_PORT: 6379
-	  
-    networks:
+  SPRING_DATA_REDIS_HOST: msa-redis
+  SPRING_DATA_REDIS_PORT: 6379
+  networks:
       - msa-network
 
 networks:
