@@ -6,7 +6,6 @@ import java.util.List;
 import com.example.payment.dto.response.WalletResponseDTO;
 
 public interface PaymentService {
-    List<WalletResponseDTO> getAllWallets();
 
-    public Long getWalletPoints(Long memberId);
+
 }
