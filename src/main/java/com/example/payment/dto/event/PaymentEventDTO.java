@@ -34,4 +34,5 @@ public class PaymentEventDTO {
         this.status = status;
         this.createdAt = LocalDateTime.now();
     }
+    // 수정완료
 }

@@ -17,5 +17,5 @@ public class WalletResponseDTO {
     private Integer version;
     private OffsetDateTime createdAt; // 타입 변경
     private OffsetDateTime updatedAt; // 타입 변경
-
+// 수정완료
 }
