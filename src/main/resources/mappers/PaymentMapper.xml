@@ -16,7 +16,7 @@
         ORDER BY created_at DESC
     </select>
 
-    <select id="getBalanceByMemberId" resultType="java.math.BigDecimal">
+    <select id="getBalanceByMemberId" resultType="Long">
         SELECT balance 
         FROM pay.wallets 
         WHERE member_id = #{memberId}

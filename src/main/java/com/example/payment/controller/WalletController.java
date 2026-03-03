@@ -59,10 +59,10 @@ public class WalletController {
 
     // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
     @GetMapping("/balance")
-    public ResponseEntity<WalletResponseDTO> getBalance(@RequestParam("member_id") Long memberId) {
+    public ResponseEntity<Long> getBalance(@RequestParam("member_id") Long memberId) {
         // [Self-Review] memberId 유효성 검증 로직 추가 가능
-        WalletResponseDTO response = paymentService.getWalletPoints(memberId);
-        return ResponseEntity.ok(response);
+        Long balance = paymentService.getWalletPoints(memberId);
+        return ResponseEntity.ok(balance);
     }
 
 }
