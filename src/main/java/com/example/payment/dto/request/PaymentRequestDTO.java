@@ -17,6 +17,7 @@ public class PaymentRequestDTO {
     private String orderId; // res.reservations의 reservation_id (결제 원장의 reference_id로 사용)
     private Long memberId;        // 결제자 member_id (지갑 조회를 위해 필수)
     private Integer amount;       // 총 결제 금액 (total_price)
+    private String type;   // 요청 타입
     private String eventTitle;    // 결제 상세 내역에 기록할 공연명
 
     // 요청한 서비스가 응답받길 원하는 라우팅 키
