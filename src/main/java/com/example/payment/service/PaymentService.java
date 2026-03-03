@@ -7,4 +7,6 @@ import com.example.payment.dto.response.WalletResponseDTO;
 
 public interface PaymentService {
     List<WalletResponseDTO> getAllWallets();
+
+    public WalletResponseDTO getWalletPoints(Long memberId);
 }
