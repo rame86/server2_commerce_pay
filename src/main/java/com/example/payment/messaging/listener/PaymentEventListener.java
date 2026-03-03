@@ -19,22 +19,20 @@ public class PaymentEventListener {
     private final PaymentEventProducer producer;
 
     // 지정된 큐를 구독하고, JSON 데이터를 DTO로 자동 변환하여 받음
-    // pay.request.queue 바라보기    
+    // pay.request.queue 바라보기
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentRequestDTO requestDTO) {
         String type = requestDTO.getType();
-        
-        // 1. 메시지 타입에 따른 메소드 라우팅
+
+        // 메시지 타입에 따른 메소드 라우팅
         switch (type) {
-            case "PAYMENT" -> handlePayment(requestDTO);
-            case "REFUND" -> handleRefund(requestDTO);
+            case "PAYMENT" -> handlePayment(requestDTO); // 결제요청 -> 결제 완료시 반환값 = "COMPLETE"
+            case "REFUND" -> handleRefund(requestDTO); // 환불요청 -> 환불 완료시 반환값 = "REFUNDED"
             default -> log.error("알 수 없는 메시지 타입: {}, 주문번호: {}", type, requestDTO.getOrderId());
         }
     }
 
-    /**
-     * 결제 요청 처리 logic
-     */
+    // 결제 요청 처리 logic
     private void handlePayment(PaymentRequestDTO requestDTO) {
         String orderId = requestDTO.getOrderId();
         String replyKey = requestDTO.getReplyRoutingKey();
@@ -44,7 +42,7 @@ public class PaymentEventListener {
             log.info("[PAYMENT] 결제 시작 - 주문번호: {}", orderId);
 
             // 비즈니스 로직 시뮬레이션
-            Thread.sleep(3000); 
+            Thread.sleep(3000);
 
             producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.");
         } catch (InterruptedException e) {
@@ -53,9 +51,8 @@ public class PaymentEventListener {
             handleError(replyKey, orderId, "결제 실패: " + e.getMessage(), e);
         }
     }
-    /**
-     * 환불 요청 처리 logic
-     */
+
+    // 환불 요청 처리 logic
     private void handleRefund(PaymentRequestDTO requestDTO) {
         String orderId = requestDTO.getOrderId();
         String replyKey = requestDTO.getReplyRoutingKey();
@@ -64,7 +61,7 @@ public class PaymentEventListener {
             log.info("[REFUND] 환불 시작 - 주문번호: {}", orderId);
 
             // 환불 로직 수행 (예: 월렛 포인트 복구)
-            Thread.sleep(3000); 
+            Thread.sleep(3000);
 
             // 요구사항에 따른 "REFUNDED" 상태 전송
             producer.sendStatusUpdate(replyKey, orderId, "REFUNDED", "환불 처리가 완료되었습니다.");
@@ -74,9 +71,8 @@ public class PaymentEventListener {
             handleError(replyKey, orderId, "환불 실패: " + e.getMessage(), e);
         }
     }
-    /**
-     * 공통 예외 처리 및 실패 메시지 전송
-     */
+
+    // 공통 예외 처리 및 실패 메시지 전송
     private void handleError(String replyKey, String orderId, String errorMsg, Exception e) {
         log.error("처리 중 오류 발생 - 주문번호: {}, 사유: {}", orderId, e.getMessage());
         if (e instanceof InterruptedException) {
@@ -84,5 +80,5 @@ public class PaymentEventListener {
         }
         producer.sendStatusUpdate(replyKey, orderId, "FAIL", errorMsg);
     }
-    
+
 }
