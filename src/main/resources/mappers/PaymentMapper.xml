@@ -15,4 +15,11 @@
         FROM pay.wallets
         ORDER BY created_at DESC
     </select>
+
+    <select id="getBalanceByMemberId" resultType="Long">
+        SELECT balance 
+        FROM pay.wallets 
+        WHERE member_id = #{memberId}
+    </select>
+    
 </mapper>

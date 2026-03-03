@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.dto.response.WalletResponseDTO;
@@ -54,6 +55,14 @@ public class WalletController {
         
         // 4. ResponseEntity를 사용하여 200 OK 상태 코드와 함께 데이터를 반환
         return ResponseEntity.ok(wallets);
+    }
+
+    // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
+    @GetMapping("/balance")
+    public ResponseEntity<Long> getBalance(@RequestParam("member_id") Long memberId) {
+        // [Self-Review] memberId 유효성 검증 로직 추가 가능
+        Long balance = paymentService.getWalletPoints(memberId);
+        return ResponseEntity.ok(balance);
     }
 
 }

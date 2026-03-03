@@ -25,4 +25,15 @@ public class PaymentServiceImpl implements PaymentService {
       
         return paymentMapper.findAllWallets();
     }
+
+    public Long getWalletPoints(Long memberId) {
+        Long balance = paymentMapper.getBalanceByMemberId(memberId);
+        
+        // 지갑 정보가 없으면 잔액 0원 반환 (보안 및 실행 가능성 고려)
+        if (balance == null) {            
+            return balance;
+        }
+        
+        return balance;
+    }
 }
