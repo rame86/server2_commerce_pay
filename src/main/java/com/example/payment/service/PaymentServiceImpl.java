@@ -1,7 +1,6 @@
 // src/main/java/com/example/payment/service/PaymentServiceImpl.java
 package com.example.payment.service;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -27,14 +26,14 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentMapper.findAllWallets();
     }
 
-    public WalletResponseDTO getWalletPoints(Long memberId) {
-        BigDecimal balance = paymentMapper.getBalanceByMemberId(memberId);
+    public Long getWalletPoints(Long memberId) {
+        Long balance = paymentMapper.getBalanceByMemberId(memberId);
         
         // 지갑 정보가 없으면 잔액 0원 반환 (보안 및 실행 가능성 고려)
-        if (balance == null) {
-            return new WalletResponseDTO(BigDecimal.ZERO);
+        if (balance == null) {            
+            return balance;
         }
         
-        return new WalletResponseDTO(balance);
+        return balance;
     }
 }

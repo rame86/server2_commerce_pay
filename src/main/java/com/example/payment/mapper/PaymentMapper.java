@@ -2,7 +2,6 @@
 
 package com.example.payment.mapper;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -17,6 +16,6 @@ public interface PaymentMapper {
     List<WalletResponseDTO> findAllWallets();
 
     // member_id로 잔액 조회 
-    BigDecimal getBalanceByMemberId(@Param("memberId") Long memberId);
+    Long getBalanceByMemberId(@Param("memberId") Long memberId);
     
 }

@@ -1,9 +1,10 @@
-GET http://localhost/msa/pay/wallet/
+# GET http://localhost/msa/pay/wallet/
+# Content-Type: application/json
+# Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTc2ODQxLCJleHAiOjE3NzIxODA0NDF9.Q2S2E-RZCUS6BBQrPZPuz4yvabtWy7y_tPvgBctx2q_C4oqnhKDSphIhwz6mz9Hk
+
+
+
+GET http://localhost/msa/pay/wallet/balance?member_id=16
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTc2ODQxLCJleHAiOjE3NzIxODA0NDF9.Q2S2E-RZCUS6BBQrPZPuz4yvabtWy7y_tPvgBctx2q_C4oqnhKDSphIhwz6mz9Hk
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyNTIxNzMzLCJleHAiOjE3NzI1MjUzMzN9.e4m3LYhvij6hvujru7EG3CXDq6v9nxHpwODNnv2ddh6hyswKWaVMfQdKnztbFQ8j
 
-
-
-POST http://localhost/msa/pay/wallet/charge
-Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTc2ODQxLCJleHAiOjE3NzIxODA0NDF9.Q2S2E-RZCUS6BBQrPZPuz4yvabtWy7y_tPvgBctx2q_C4oqnhKDSphIhwz6mz9Hk
