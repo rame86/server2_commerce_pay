@@ -1,6 +1,7 @@
 // src/main/java/com/example/payment/messaging/producer/PaymentEventProducer.java
 package com.example.payment.messaging.producer;
 
+import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +32,7 @@ public class PaymentEventProducer {
             // targetRoutingKey에 따라 Shop 또는 Res 큐로 동적 발송됨
             rabbitTemplate.convertAndSend(EXCHANGE_NAME, targetRoutingKey, responseDTO);
             log.info("상태 업데이트 발송 완료 - 목적지: {}, 주문번호: {}, 상태: {}", targetRoutingKey, orderId, status);
-        } catch (Exception e) {
+        } catch (AmqpException e) {
             log.error("메시지 발송 실패 - 주문번호: {}, 에러: {}", orderId, e.getMessage());
         }
     }
