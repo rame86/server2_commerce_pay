@@ -5,25 +5,38 @@ import org.springframework.stereotype.Service;
 
 import com.example.config.RabbitMQConfig;
 import com.example.payment.dto.request.PaymentRequestDTO;
+import com.example.payment.messaging.producer.PaymentEventProducer;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class PaymentEventListener {
 
+    private final PaymentEventProducer producer;
+
     // 지정된 큐를 구독하고, JSON 데이터를 DTO로 자동 변환하여 받음
+    // pay.request.queue 바라보기
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receivePaymentRequest(PaymentRequestDTO requestDTO) {
+        String orderId = requestDTO.getOrderId();
+        // 요청한 서비스가 적어놓은 반송 주소
+        String replyKey = requestDTO.getReplyRoutingKey();
        try {
-            log.info("결제 요청 수신 완료 - 예약번호: {}, 금액: {}", 
-                     requestDTO.getReservationId(), requestDTO.getAmount());
+            // 1. 발신자에게 진행 중 상태 알림
+            producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "결제가 진행 중입니다.");
+            log.info("결제 로직 시작 - 주문번호: {}, 금액: {}", orderId, requestDTO.getAmount());
             
-            // 실제 결제 로직 (PG사 연동, 원장 테이블 insert 등) 수행
+            // 2. 실제 결제 로직 수행 (PG사 통신 등)
+            
+            // 3. 완료 시 발신자에게 성공 알림
+            producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.");
             
         } catch (Exception e) {
-            log.error("결제 처리 중 에러 발생: {}", e.getMessage());
-            // 에러 발생 시 DLQ(Dead Letter Queue)로 메시지를 옮기거나, 재시도(Retry) 처리 로직 필요
+            // 4. 에러 시 발신자에게 실패 알림
+            producer.sendStatusUpdate(replyKey, orderId, "FAIL", "결제 실패: " + e.getMessage());
         }
     }
 }
