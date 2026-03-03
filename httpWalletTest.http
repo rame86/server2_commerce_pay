@@ -1,0 +1,9 @@
+GET http://localhost/msa/pay/wallet/
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTc2ODQxLCJleHAiOjE3NzIxODA0NDF9.Q2S2E-RZCUS6BBQrPZPuz4yvabtWy7y_tPvgBctx2q_C4oqnhKDSphIhwz6mz9Hk
+
+
+
+POST http://localhost/msa/pay/wallet/charge
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiIxNiIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzcyMTc2ODQxLCJleHAiOjE3NzIxODA0NDF9.Q2S2E-RZCUS6BBQrPZPuz4yvabtWy7y_tPvgBctx2q_C4oqnhKDSphIhwz6mz9Hk
