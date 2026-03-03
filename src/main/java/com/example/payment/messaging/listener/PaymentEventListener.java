@@ -29,8 +29,8 @@ public class PaymentEventListener {
             producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "결제가 진행 중입니다.");
             log.info("결제 로직 시작 - 주문번호: {}, 금액: {}", orderId, requestDTO.getAmount());
             
-            // 2. 실제 결제 로직 수행 (PG사 통신 등)
-            
+            // 2. 실제 결제 로직 수행 (월렛에서 포인트 차감)
+            Thread.sleep(5000);
             // 3. 완료 시 발신자에게 성공 알림
             producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.");
             
