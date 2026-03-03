@@ -22,5 +22,5 @@ public class PaymentRequestDTO {
     public String getReservationId() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-
+// 수정완료
 }
