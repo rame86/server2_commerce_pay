@@ -7,8 +7,15 @@ import com.example.payment.dto.response.WalletResponseDTO;
 
 public interface WalletService {
 
-    public List<WalletResponseDTO> getAllWallets();
+    // 모든 지갑 정보 조회
+    List<WalletResponseDTO> getAllWallets();
 
-    public Long getBalance(Long memberId);
+    // 회원 ID로 잔액 조회
+    Long getBalance(Long memberId);
 
+    // 결제 처리 (잔액 차감 및 원장 기록)
+    void processPayment(Long memberId, String orderId, Long amount);
+
+    // 환불 처리 (잔액 복구 및 원장 기록)
+    void processRefund(String orderId);
 }
