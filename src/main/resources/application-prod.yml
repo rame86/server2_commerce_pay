@@ -1,0 +1,23 @@
+# src/main/resources/application-prod.yml
+spring:
+  datasource:
+    # 운영 환경에선 도커 컴포즈 등에서 넘겨주는 환경 변수만 사용해
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: none # 운영 환경에선 절대 테이블 자동 생성/변경 금지
+    show-sql: false # 성능을 위해 SQL 로그는 꺼둘게
+
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.example.payment.dto.response
