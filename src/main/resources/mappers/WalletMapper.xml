@@ -16,7 +16,8 @@
         member_id = #{memberId} </select>
 
     <select id="findWalletById" resultType="com.example.payment.dto.response.WalletResponseDTO">
-        SELECT wallet_id::varchar AS walletId, member_id AS memberId, balance, status, version FROM
+        SELECT wallet_id::varchar AS walletId,
+        member_id AS memberId, balance, status, version FROM
         pay.wallets WHERE wallet_id::varchar = #{walletId} </select>
 
     <update id="updateWalletBalance"> UPDATE pay.wallets SET balance = #{newBalance}, version =
