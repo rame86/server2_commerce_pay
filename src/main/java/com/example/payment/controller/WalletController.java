@@ -1,6 +1,7 @@
 package com.example.payment.controller;
 
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.dto.response.WalletResponseDTO;
-import com.example.payment.service.PaymentService;
 import com.example.payment.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class WalletController {
 
-    private final PaymentService paymentService;
     private final WalletService walletService;
 
     @GetMapping("/")
@@ -61,9 +60,9 @@ public class WalletController {
 
     // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
     @GetMapping("/balance")
-    public ResponseEntity<Long> getBalance(@RequestParam("member_id") Long memberId) {
+    public ResponseEntity<BigDecimal> getBalance(@RequestParam("member_id") Long memberId) {
         // [Self-Review] memberId 유효성 검증 로직 추가 가능
-        Long balance = walletService.getBalance(memberId);
+        BigDecimal balance = walletService.getBalance(memberId);
         return ResponseEntity.ok(balance);
     }
 
