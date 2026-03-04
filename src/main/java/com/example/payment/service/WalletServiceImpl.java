@@ -40,17 +40,23 @@ public class WalletServiceImpl implements WalletService {
     @Override
     @Transactional
     public void processPayment(Long memberId, String orderId, Long amount) {
+        // 지갑찾기
         WalletResponseDTO wallet = walletMapper.findWalletByMemberId(memberId);
+
+        // 활성화된 지갑인지 확인
         if (wallet == null || !"ACTIVE".equals(wallet.getStatus())) {
             throw new IllegalStateException("유효하지 않은 지갑 상태입니다.");
         }
 
+        // 지갑의 잔액 가져오기
         Long currentBalance = wallet.getBalance();
 
+        // 주문금액과 잔액 비교
         if (currentBalance < amount) {
             throw new IllegalStateException("잔액이 부족합니다.");
         }
 
+        // 지갑 잔액에서 주문금액 뺀후 변수저장
         Long newBalance = currentBalance - amount;
 
         // 낙관적 락(Version) 기반 업데이트
@@ -59,6 +65,7 @@ public class WalletServiceImpl implements WalletService {
             throw new IllegalStateException("결제 처리 중 충돌이 발생했습니다. 다시 시도해주세요.");
         }
 
+        // 결제내역 저장
         recordTransaction(wallet.getWalletId(), "PAYMENT", -amount, newBalance, orderId, "결제 차감");
     }
 
@@ -81,11 +88,17 @@ public class WalletServiceImpl implements WalletService {
         String walletId = (String) paymentTx.get("wallet_id");
         // DB에서 조회한 금액(Object)을 안전하게 Long으로 변환
         Long paymentAmount = ((Number) paymentTx.get("amount")).longValue();
+        log.info("결제된 금액 :"+paymentAmount);
         Long refundAmount = Math.abs(paymentAmount);
+        log.info("환불 요청 금액 :"+refundAmount);
 
         WalletResponseDTO wallet = walletMapper.findWalletById(walletId);
+        // 현재 잔액 조회
         Long currentBalance = wallet.getBalance();
+        log.info("현재 잔액 :"+currentBalance);
+        // 금액 환불하기
         Long newBalance = currentBalance + refundAmount;
+        log.info("환분후 잔액 :"+newBalance);
 
         // 낙관적 락(Version) 기반 복구
         int updatedRows = walletMapper.updateWalletBalance(walletId, newBalance, wallet.getVersion());

@@ -1,35 +1,86 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.payment.mapper.WalletMapper">
-    <!-- src/main/resources/mappers/WalletMapper.xml -->
 
     <select id="findAllWallets" resultType="com.example.payment.dto.response.WalletResponseDTO">
-        SELECT wallet_id::varchar AS walletId, member_id AS memberId, balance, status, version,
-        created_at AS createdAt, updated_at AS updatedAt FROM pay.wallets ORDER BY created_at DESC </select>
+        SELECT
+            wallet_id::varchar AS walletId,
+            member_id          AS memberId,
+            balance,
+            status,
+            version,
+            created_at         AS createdAt,
+            updated_at         AS updatedAt
+        FROM pay.wallets
+        ORDER BY created_at DESC
+    </select>
 
-    <select id="getBalanceByMemberId" resultType="Long"> SELECT balance FROM pay.wallets WHERE
-        member_id = #{memberId} </select>
+    <select id="getBalanceByMemberId" resultType="Long">
+        SELECT balance
+        FROM pay.wallets
+        WHERE member_id = #{memberId}
+    </select>
 
-    <select id="findWalletByMemberId"
-        resultType="com.example.payment.dto.response.WalletResponseDTO"> SELECT wallet_id::varchar
-        AS walletId, member_id AS memberId, balance, status, version FROM pay.wallets WHERE
-        member_id = #{memberId} </select>
+    <select id="findWalletByMemberId" resultType="com.example.payment.dto.response.WalletResponseDTO">
+        SELECT
+            wallet_id::varchar AS walletId,
+            member_id          AS memberId,
+            balance,
+            status,
+            version
+        FROM pay.wallets
+        WHERE member_id = #{memberId}
+    </select>
 
     <select id="findWalletById" resultType="com.example.payment.dto.response.WalletResponseDTO">
-        SELECT wallet_id::varchar AS walletId, member_id AS memberId, balance, status, version FROM
-        pay.wallets WHERE wallet_id::varchar = #{walletId} </select>
+        SELECT
+            wallet_id::varchar AS walletId,
+            member_id          AS memberId,
+            balance,
+            status,
+            version
+        FROM pay.wallets
+        WHERE wallet_id::varchar = #{walletId}
+    </select>
 
-    <update id="updateWalletBalance"> UPDATE pay.wallets SET balance = #{newBalance}, version =
-        version + 1, updated_at = CURRENT_TIMESTAMP WHERE wallet_id::uuid = #{walletId}::uuid AND
-        version = #{version} </update>
+    <update id="updateWalletBalance">
+        UPDATE pay.wallets
+        SET
+            balance    = #{newBalance},
+            version    = version + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE wallet_id::uuid = #{walletId}::uuid
+          AND version         = #{version}
+    </update>
 
-    <insert id="insertTransaction"> INSERT INTO pay.transactions (wallet_id, transaction_type,
-        amount, balance_after, reference_id, description) VALUES (#{walletId}::uuid,
-        #{transactionType}, #{amount}, #{balanceAfter}, #{referenceId}, #{description}) </insert>
+    <insert id="insertTransaction">
+        INSERT INTO pay.transactions (
+            wallet_id,
+            transaction_type,
+            amount,
+            balance_after,
+            reference_id,
+            description
+        ) VALUES (
+            #{walletId}::uuid,
+            #{transactionType},
+            #{amount},
+            #{balanceAfter},
+            #{referenceId},
+            #{description}
+        )
+    </insert>
 
-    <select id="findTransactionByReferenceAndType" resultType="map"> SELECT transaction_id::varchar
-        AS transaction_id, wallet_id::varchar AS wallet_id, amount, balance_after FROM
-        pay.transactions WHERE reference_id = #{referenceId} AND transaction_type =
-        #{transactionType} LIMIT 1 </select>
+    <select id="findTransactionByReferenceAndType" resultType="map">
+        SELECT
+            transaction_id::varchar AS transaction_id,
+            wallet_id::varchar      AS wallet_id,
+            amount,
+            balance_after
+        FROM pay.transactions
+        WHERE reference_id     = #{referenceId}
+          AND transaction_type = #{transactionType}
+        LIMIT 1
+    </select>
 
 </mapper>
