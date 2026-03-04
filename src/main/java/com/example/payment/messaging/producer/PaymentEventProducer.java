@@ -25,8 +25,8 @@ public class PaymentEventProducer {
      * 상태 업데이트 발송
      * targetRoutingKey를 받아서 요청한 곳으로 정확히 되돌려줌
      */
-    public void sendStatusUpdate(String targetRoutingKey, String orderId, String status, String message) {
-        PaymentResponseDTO responseDTO = new PaymentResponseDTO(orderId, status, message);
+    public void sendStatusUpdate(String targetRoutingKey, String orderId, String status, String message, String type) {
+        PaymentResponseDTO responseDTO = new PaymentResponseDTO(orderId, status, message, type);
         
         try {
             // targetRoutingKey에 따라 Shop 또는 Res 큐로 동적 발송됨
