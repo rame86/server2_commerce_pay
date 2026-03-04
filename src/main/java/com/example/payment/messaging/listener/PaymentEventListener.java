@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import com.example.config.RabbitMQConfig;
 import com.example.payment.dto.request.PaymentRequestDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
+import com.example.payment.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentEventListener {
 
     private final PaymentEventProducer producer;
+    private final WalletService walletService;
 
     // 지정된 큐를 구독하고, JSON 데이터를 DTO로 자동 변환하여 받음
     // pay.request.queue 바라보기
@@ -42,6 +44,7 @@ public class PaymentEventListener {
             log.info("[PAYMENT] 결제 시작 - 주문번호: {}", orderId);
 
             // 비즈니스 로직 시뮬레이션
+            walletService.processPayment(requestDTO.getMemberId(), requestDTO.getOrderId(), requestDTO.getAmount());
             Thread.sleep(3000);
 
             producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.");
@@ -61,6 +64,7 @@ public class PaymentEventListener {
             log.info("[REFUND] 환불 시작 - 주문번호: {}", orderId);
 
             // 환불 로직 수행 (예: 월렛 포인트 복구)
+            walletService.processRefund(orderId);
             Thread.sleep(3000);
 
             // 요구사항에 따른 "REFUNDED" 상태 전송
