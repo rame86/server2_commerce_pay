@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.dto.response.WalletResponseDTO;
 import com.example.payment.service.PaymentService;
+import com.example.payment.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 public class WalletController {
 
     private final PaymentService paymentService;
+    private final WalletService walletService;
 
     @GetMapping("/")
     public String getWallet(
@@ -51,7 +53,7 @@ public class WalletController {
     public ResponseEntity<List<WalletResponseDTO>> getAllWallets() {
         
         // 서비스 계층에서 DB의 모든 지갑 정보를 가져옴
-        List<WalletResponseDTO> wallets = paymentService.getAllWallets();
+        List<WalletResponseDTO> wallets = walletService.getAllWallets();
         
         // 4. ResponseEntity를 사용하여 200 OK 상태 코드와 함께 데이터를 반환
         return ResponseEntity.ok(wallets);
@@ -61,7 +63,7 @@ public class WalletController {
     @GetMapping("/balance")
     public ResponseEntity<Long> getBalance(@RequestParam("member_id") Long memberId) {
         // [Self-Review] memberId 유효성 검증 로직 추가 가능
-        Long balance = paymentService.getWalletPoints(memberId);
+        Long balance = walletService.getBalance(memberId);
         return ResponseEntity.ok(balance);
     }
 

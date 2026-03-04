@@ -1,7 +1,21 @@
+// src/main/java/com/example/payment/service/WalletService.java
 package com.example.payment.service;
 
-public interface  WalletService {
-    public long getWalletPoints();
+import java.util.List;
 
-    
+import com.example.payment.dto.response.WalletResponseDTO;
+
+public interface WalletService {
+
+    // 모든 지갑 정보 조회
+    List<WalletResponseDTO> getAllWallets();
+
+    // 회원 ID로 잔액 조회
+    Long getBalance(Long memberId);
+
+    // 결제 처리 (잔액 차감 및 원장 기록)
+    void processPayment(Long memberId, String orderId, Long amount);
+
+    // 환불 처리 (잔액 복구 및 원장 기록)
+    void processRefund(String orderId);
 }
