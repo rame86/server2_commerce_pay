@@ -24,3 +24,14 @@ spring:
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml # 매퍼 XML 위치 지정
   type-aliases-package: com.example.payment.dto # DTO 패키지 경로 별칭
+
+  # 추가된 내용
+kakao:
+  pay:
+    secret-key: dev_secret_key_here # 개발용 시크릿 키
+    cid: TC0ONETIME # 테스트용 가맹점 코드
+    # 로컬 Nginx Gateway 또는 직접 접속 주소
+    approval-url: http://localhost:8083/payment/success
+    cancel-url: http://localhost:8083/payment/cancel
+    fail-url: http://localhost:8083/payment/fail
+    base-url: https://open-api.kakaopay.com
