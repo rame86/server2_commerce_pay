@@ -88,11 +88,17 @@ public class WalletServiceImpl implements WalletService {
         String walletId = (String) paymentTx.get("wallet_id");
         // DB에서 조회한 금액(Object)을 안전하게 Long으로 변환
         Long paymentAmount = ((Number) paymentTx.get("amount")).longValue();
+        log.info("결제된 금액 :"+paymentAmount);
         Long refundAmount = Math.abs(paymentAmount);
+        log.info("환불 요청 금액 :"+refundAmount);
 
         WalletResponseDTO wallet = walletMapper.findWalletById(walletId);
+        // 현재 잔액 조회
         Long currentBalance = wallet.getBalance();
+        log.info("현재 잔액 :"+currentBalance);
+        // 금액 환불하기
         Long newBalance = currentBalance + refundAmount;
+        log.info("환분후 잔액 :"+newBalance);
 
         // 낙관적 락(Version) 기반 복구
         int updatedRows = walletMapper.updateWalletBalance(walletId, newBalance, wallet.getVersion());
