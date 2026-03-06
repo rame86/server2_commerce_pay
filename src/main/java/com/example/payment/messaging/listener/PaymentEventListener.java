@@ -24,13 +24,14 @@ public class PaymentEventListener {
     // pay.request.queue 바라보기
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentEventDTO requestDTO) {
+        log.info("[ Message Queue 도착 ] "+ requestDTO.toString());
         String type = requestDTO.getType();
-
+        
         // 메시지 타입에 따른 메소드 라우팅
         switch (type) {
             case "PAYMENT" -> handlePayment(requestDTO); // 결제요청 -> 결제 완료시 반환값 = "COMPLETE"
             case "REFUND" -> handleRefund(requestDTO); // 환불요청 -> 환불 완료시 반환값 = "REFUNDED"
-            case "DONATION" -> handleRefund(requestDTO); // 후원요청 -> 후원 완료시 반환값 = "COMPLETE"
+            case "DONATION" -> handleDonation(requestDTO); // 후원요청 -> 후원 완료시 반환값 = "COMPLETE"
             default -> log.error("알 수 없는 메시지 타입: {}, 주문번호: {}", type, requestDTO.getOrderId());
         }
     }
@@ -79,6 +80,28 @@ public class PaymentEventListener {
         }
     }
 
+    // 후원 요청 처리 logic
+    private void handleDonation(PaymentEventDTO requestDTO) {
+        String orderId = requestDTO.getOrderId();
+        String replyKey = requestDTO.getReplyRoutingKey();
+        String type = requestDTO.getType();
+    
+        try {
+            producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "결제가 진행 중입니다.",type);
+            log.info("[DONATION] 후원 요청 - 주문번호: {}", orderId);
+
+            // 비즈니스 로직 시뮬레이션
+            walletService.processPayment(requestDTO.getMemberId(), requestDTO.getOrderId(), requestDTO.getAmount());
+            Thread.sleep(3000);
+
+            producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.", type);
+        } catch (InterruptedException e) {
+            handleError(replyKey, orderId, "시스템 중단으로 인한 결제 실패", e);
+        } catch (Exception e) {
+            handleError(replyKey, orderId, "결제 실패: " + e.getMessage(), e);
+        }
+    }
+
     // 공통 예외 처리 및 실패 메시지 전송
     private void handleError(String replyKey, String orderId, String errorMsg, Exception e) {
         log.error("처리 중 오류 발생 - 주문번호: {}, 사유: {}", orderId, e.getMessage());
@@ -87,5 +110,7 @@ public class PaymentEventListener {
         }
         producer.sendStatusUpdate(replyKey, orderId, "FAIL", errorMsg, "ERROR");
     }
+
+    
 
 }

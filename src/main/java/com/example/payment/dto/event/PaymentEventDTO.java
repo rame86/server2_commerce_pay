@@ -20,7 +20,7 @@ public class PaymentEventDTO {
     private BigDecimal amount; // 총 결제 혹은 환불 요청 금액
     private String type; // 요청 타입 (결제 or 환불 or 후원)
     private String eventTitle; // 결제 상세 내역에 기록 내용(공연명 or 상품명 or 후원내역)
-    private Long atistId;
+    private Long artistId;
     private String replyRoutingKey; // 요청한 서비스가 응답받길 원하는 라우팅 키
 
     public String getReservationId() {
