@@ -15,8 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.payment.domain.Charge;
 import com.example.payment.domain.TransactionHistory;
 import com.example.payment.domain.Wallet;
-import com.example.payment.dto.request.PaymentRequestDTO;
-import com.example.payment.dto.response.PaymentReadyResponseDTO;
+import com.example.payment.dto.request.ChargeRequestDTO;
+import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.repository.ChargeRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
 import com.example.payment.repository.WalletRepository;
@@ -45,10 +45,10 @@ public class PaymentServiceImpl implements PaymentService {
     // [READY_PAYMENT] 지갑충전 준비
     @Override
     @Transactional
-    public PaymentReadyResponseDTO readyPayment(Long memberId, PaymentRequestDTO request) {
+    public ChargeReadyResponseDTO readyPayment(Long memberId, ChargeRequestDTO request) {
         // [LOG] 요청 진입
         log.info("[READY_PAYMENT] 요청 수신 - memberId: {}, payType: {}, amount: {}", 
-                 memberId, request.getPayType(), request.getChargeAmount());
+                 memberId, request.getPayType(), request.getAmount());
 
         // 1. 지갑 검증
         Wallet wallet = walletRepository.findByMemberId(memberId)
@@ -73,7 +73,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .chargeId(UUID.randomUUID())
                 .walletId(wallet.getWalletId())
                 .pgProvider(mappedPgProvider)
-                .amount(request.getChargeAmount())
+                .amount(request.getAmount())
                 .status("PENDING")
                 .createdAt(OffsetDateTime.now())
                 .build();
@@ -83,7 +83,7 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("[READY_PAYMENT] 충전 원장 DB입력 완료");
         try {
             // 5. DTO 변환 후 Provider 위임
-            PaymentReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId);
+            ChargeReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId);
 
             // 변경 감지(Dirty Checking)로 UPDATE 자동 실행
             // (UUID 수동 할당으로 인해 merge 동작하므로 명시적 save 재호출 유지)
@@ -103,8 +103,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     // [APPROVE_PAYMENT] 실제 지갑충전 시작
-    @Override
-    // @Transactional 제거: 통신 중 DB 커넥션 점유 방지 및 예외 롤백 회피
+    @Override    
     public void approvePayment(UUID chargeId, String pgToken, String memberId) {
         // [LOG] 요청 진입
         log.info("[APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);

@@ -12,14 +12,20 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
+    /*
+        결제와 환불 모두 하나의 큐에서 구독중
+        payload.type(PAYMENT or REFUND)에 따라 결제 환불 구분
+     */
     // Exchange: 메시지가 가장 먼저 도착하는 우체국. 라우팅 규칙을 결정함
     public static final String EXCHANGE_NAME = "msa.direct.exchange";
     
+    // Routing Key: 특정 큐로 메시지를 보내기 위한 주소(필터)
+    public static final String ROUTING_KEY = "pay.request";
+
     // Queue: 메시지가 소비되기 전까지 저장되는 우편함
     public static final String QUEUE_NAME = "pay.request.queue";
     
-    // Routing Key: 특정 큐로 메시지를 보내기 위한 주소(필터)
-    public static final String ROUTING_KEY = "pay.request";
+    
 
     /**
      * Direct Exchange 설정

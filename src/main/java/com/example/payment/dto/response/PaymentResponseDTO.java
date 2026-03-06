@@ -18,5 +18,6 @@ public class PaymentResponseDTO {
     // 결과 메시지: 성공, 실패 사유 등 상세 정보
     private String message;
 
+    // 요청시 타입
     private String type;
 }

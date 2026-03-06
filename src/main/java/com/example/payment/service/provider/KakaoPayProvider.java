@@ -10,7 +10,7 @@ import org.springframework.web.client.RestClientException;
 
 import com.example.config.KakaoPayProperties;
 import com.example.payment.domain.Charge;
-import com.example.payment.dto.response.PaymentReadyResponseDTO;
+import com.example.payment.dto.response.ChargeReadyResponseDTO;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -42,7 +42,7 @@ public class KakaoPayProvider implements PaymentProvider {
      * 사용자가 결제 수단을 선택하고 카카오페이 결제 화면으로 넘어가기 전 TID 발급 및 URL 획득
      */
     @Override
-    public PaymentReadyResponseDTO ready(Charge charge, Long memberId) {
+    public ChargeReadyResponseDTO ready(Charge charge, Long memberId) {
         log.info("[PAYMENT_READY] 결제 준비 요청 시작 - ChargeID: {}, Amount: {}", charge.getChargeId(), charge.getAmount());
 
         String approvalUrlWithId = properties.approvalUrl() + "?chargeId=" + charge.getChargeId() + "&memberId=" + memberId;
@@ -78,7 +78,7 @@ public class KakaoPayProvider implements PaymentProvider {
 
             log.info("[PAYMENT_READY] 결제 준비 완료 - TID: {}", response.tid());
 
-            return PaymentReadyResponseDTO.builder()
+            return ChargeReadyResponseDTO.builder()
                     .chargeId(charge.getChargeId())
                     .payType("KAKAOPAY")
                     .nextRedirectUrl(response.next_redirect_pc_url())
