@@ -1,10 +1,11 @@
-// src/main/java/com/example/payment/dto/request/PaymentRequestDto.java
+// src/main/java/com/example/payment/dto/request/PaymentRequestDTO.java
 package com.example.payment.dto.request;
+
+import java.math.BigDecimal;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
-
 
 // RabbitMQ를 통해 전달받는 결제 요청 데이터 포장지
 
@@ -13,12 +14,12 @@ import lombok.ToString;
 @ToString // 수신 확인용 로그를 찍을 때 객체 안의 값을 보기 위해 추가.
 public class PaymentRequestDTO {
 
-    // Node.js에서 보내는 JSON의 Key 값과 변수명이 정확히 일치해야 자동 매핑.    
+    // Node.js에서 보내는 JSON의 Key 값과 변수명이 정확히 일치해야 자동 매핑.
     private String orderId; // res.reservations의 reservation_id (결제 원장의 reference_id로 사용)
-    private Long memberId;        // 결제자 member_id (지갑 조회를 위해 필수)
-    private Long amount;       // 총 결제 금액 (total_price)
-    private String type;   // 요청 타입
-    private String eventTitle;    // 결제 상세 내역에 기록할 공연명
+    private Long memberId; // 결제자 member_id (지갑 조회를 위해 필수)
+    private BigDecimal amount; // 총 결제 금액 (total_price)
+    private String type; // 요청 타입
+    private String eventTitle; // 결제 상세 내역에 기록할 공연명
 
     // 요청한 서비스가 응답받길 원하는 라우팅 키
     // 이거 진짜진짜 중요하다고...ㅠ
@@ -28,5 +29,10 @@ public class PaymentRequestDTO {
     public String getReservationId() {
         throw new UnsupportedOperationException("Not supported yet.");
     }
-// 수정완료
+    // 수정완료
+
+    // 지갑 충전
+    private BigDecimal chargeAmount;  // 충전 요청 금액
+    private String payType; // "kakao_pay", "naver_pay", "bank_transfer" 등
+
 }

@@ -38,16 +38,17 @@ public class PaymentEventListener {
     private void handlePayment(PaymentRequestDTO requestDTO) {
         String orderId = requestDTO.getOrderId();
         String replyKey = requestDTO.getReplyRoutingKey();
+        String type = requestDTO.getType();
 
         try {
-            producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "결제가 진행 중입니다.");
+            producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "결제가 진행 중입니다.",type);
             log.info("[PAYMENT] 결제 시작 - 주문번호: {}", orderId);
 
             // 비즈니스 로직 시뮬레이션
             walletService.processPayment(requestDTO.getMemberId(), requestDTO.getOrderId(), requestDTO.getAmount());
             Thread.sleep(3000);
 
-            producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.");
+            producer.sendStatusUpdate(replyKey, orderId, "COMPLETE", "결제가 성공적으로 완료되었습니다.", type);
         } catch (InterruptedException e) {
             handleError(replyKey, orderId, "시스템 중단으로 인한 결제 실패", e);
         } catch (Exception e) {
@@ -59,6 +60,7 @@ public class PaymentEventListener {
     private void handleRefund(PaymentRequestDTO requestDTO) {
         String orderId = requestDTO.getOrderId();
         String replyKey = requestDTO.getReplyRoutingKey();
+        String type = requestDTO.getType();
 
         try {
             log.info("[REFUND] 환불 시작 - 주문번호: {}", orderId);
@@ -68,7 +70,7 @@ public class PaymentEventListener {
             Thread.sleep(3000);
 
             // 요구사항에 따른 "REFUNDED" 상태 전송
-            producer.sendStatusUpdate(replyKey, orderId, "REFUNDED", "환불 처리가 완료되었습니다.");
+            producer.sendStatusUpdate(replyKey, orderId, "REFUNDED", "환불 처리가 완료되었습니다.", type);
         } catch (InterruptedException e) {
             handleError(replyKey, orderId, "시스템 중단으로 인한 환불 실패", e);
         } catch (Exception e) {
@@ -82,7 +84,7 @@ public class PaymentEventListener {
         if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
         }
-        producer.sendStatusUpdate(replyKey, orderId, "FAIL", errorMsg);
+        producer.sendStatusUpdate(replyKey, orderId, "FAIL", errorMsg, "ERROR");
     }
 
 }
