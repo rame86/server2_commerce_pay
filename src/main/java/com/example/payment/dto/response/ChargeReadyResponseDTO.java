@@ -6,7 +6,7 @@ import java.util.UUID;
 import lombok.Builder;
 
 @Builder
-public record PaymentReadyResponseDTO(
+public record ChargeReadyResponseDTO(
                 UUID chargeId, // 서비스 결제 고유 번호
                 String payType, // 결제 수단
                 String nextRedirectUrl, // 결제 페이지 리다이렉트 URL

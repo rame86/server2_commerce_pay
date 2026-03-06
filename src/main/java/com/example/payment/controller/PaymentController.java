@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.dto.request.PaymentRequestDTO;
-import com.example.payment.dto.response.PaymentReadyResponseDTO;
+import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.service.PaymentService;
 
 import lombok.RequiredArgsConstructor;
@@ -42,12 +42,12 @@ public class PaymentController {
      }
      */
     @PostMapping("/charge")
-    public ResponseEntity<PaymentReadyResponseDTO> chargePoint(
+    public ResponseEntity<ChargeReadyResponseDTO> chargePoint(
             @RequestHeader("X-User-Id") Long memberId,
             @RequestBody PaymentRequestDTO request) {
 
         // 서비스로 처리를 위임하고 공통 규격의 응답을 반환
-        PaymentReadyResponseDTO response = paymentService.readyPayment(memberId, request);
+        ChargeReadyResponseDTO response = paymentService.readyPayment(memberId, request);
         return ResponseEntity.ok(response);
     }
 

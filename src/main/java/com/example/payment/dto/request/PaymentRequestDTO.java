@@ -20,11 +20,7 @@ public class PaymentRequestDTO {
     private BigDecimal amount; // 총 결제 금액 (total_price)
     private String type; // 요청 타입
     private String eventTitle; // 결제 상세 내역에 기록할 공연명
-
-    // 요청한 서비스가 응답받길 원하는 라우팅 키
-    // 이거 진짜진짜 중요하다고...ㅠ
-    // ex) "res.status.update" 또는 "shop.status.update"
-    private String replyRoutingKey;
+    private String replyRoutingKey; // 요청한 서비스가 응답받길 원하는 라우팅 키
 
     public String getReservationId() {
         throw new UnsupportedOperationException("Not supported yet.");

@@ -16,7 +16,7 @@ import com.example.payment.domain.Charge;
 import com.example.payment.domain.TransactionHistory;
 import com.example.payment.domain.Wallet;
 import com.example.payment.dto.request.PaymentRequestDTO;
-import com.example.payment.dto.response.PaymentReadyResponseDTO;
+import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.repository.ChargeRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
 import com.example.payment.repository.WalletRepository;
@@ -45,7 +45,7 @@ public class PaymentServiceImpl implements PaymentService {
     // [READY_PAYMENT] 지갑충전 준비
     @Override
     @Transactional
-    public PaymentReadyResponseDTO readyPayment(Long memberId, PaymentRequestDTO request) {
+    public ChargeReadyResponseDTO readyPayment(Long memberId, PaymentRequestDTO request) {
         // [LOG] 요청 진입
         log.info("[READY_PAYMENT] 요청 수신 - memberId: {}, payType: {}, amount: {}", 
                  memberId, request.getPayType(), request.getChargeAmount());
@@ -83,7 +83,7 @@ public class PaymentServiceImpl implements PaymentService {
         log.info("[READY_PAYMENT] 충전 원장 DB입력 완료");
         try {
             // 5. DTO 변환 후 Provider 위임
-            PaymentReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId);
+            ChargeReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId);
 
             // 변경 감지(Dirty Checking)로 UPDATE 자동 실행
             // (UUID 수동 할당으로 인해 merge 동작하므로 명시적 save 재호출 유지)
