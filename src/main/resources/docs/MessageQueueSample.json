@@ -1,0 +1,10 @@
+{
+  "orderId": "RESERVATION_20260306_001",
+  "memberId": 1004,
+  "amount": 55000.00,
+  "type": "PAYMENT",
+  "eventTitle": "2026 봄맞이 팬미팅 - 서울",
+  "replyRoutingKey": "pay.response.service_a",
+  "chargeAmount": 0.00,
+  "payType": "kakao_pay"
+}
