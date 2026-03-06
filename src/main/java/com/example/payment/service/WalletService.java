@@ -19,4 +19,7 @@ public interface WalletService {
 
     // 환불 처리 (잔액 복구 및 원장 기록)
     void processRefund(String orderId);
+
+    // 잔액 변동시 레디스 업데이트
+    void updateRedisBalance(Long memberId, BigDecimal balance);
 }

@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ public class WalletServiceImpl implements WalletService {
 
     private final WalletRepository walletRepository;
     private final TransactionHistoryRepository transactionRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Override
     @Transactional(readOnly = true) // 읽기 전용 트랜잭션으로 성능 최적화
@@ -136,4 +138,11 @@ public class WalletServiceImpl implements WalletService {
                 .version(wallet.getVersion() != null ? wallet.getVersion() : 0)
                 .build();
     }
+
+    @Override
+    public void updateRedisBalance(Long memberId, BigDecimal balance) {
+        redisTemplate.opsForHash().put("AUTH:MEMBER:" + memberId, "balance", balance.toPlainString());
+    }
+
+
 }

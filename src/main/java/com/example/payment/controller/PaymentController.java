@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.dto.request.PaymentRequestDTO;
-import com.example.payment.dto.response.PaymentReadyResponseDTO;
+import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.service.PaymentService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,22 +22,32 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 public class PaymentController {
-    
+
     private final PaymentService paymentService;
-    
+
     @GetMapping("/")
     public String hello() {
         return "서버가 정상적으로 실행 중!";
     }
 
     // 지갑 충전 요청
+    /*      
+     POST http://localhost/msa/pay/payment/charge
+     Content-Type: application/json
+     Authorization: Bearer ~~~~~JWT~~~~~
+     
+     {
+      "payType": "kakao_pay",
+      "chargeAmount": 30000
+     }
+     */
     @PostMapping("/charge")
-    public ResponseEntity<PaymentReadyResponseDTO> chargePoint(
+    public ResponseEntity<ChargeReadyResponseDTO> chargePoint(
             @RequestHeader("X-User-Id") Long memberId,
             @RequestBody PaymentRequestDTO request) {
 
         // 서비스로 처리를 위임하고 공통 규격의 응답을 반환
-        PaymentReadyResponseDTO response = paymentService.readyPayment(memberId, request);
+        ChargeReadyResponseDTO response = paymentService.readyPayment(memberId, request);
         return ResponseEntity.ok(response);
     }
 
@@ -45,11 +55,11 @@ public class PaymentController {
     @GetMapping("/success")
     public ResponseEntity<String> approvePayment(
             @RequestParam("pg_token") String pgToken,
-            @RequestParam("chargeId") UUID chargeId) {
+            @RequestParam("chargeId") UUID chargeId,
+            @RequestParam("memberId") String memberId) {
 
-        paymentService.approvePayment(chargeId, pgToken);
+        paymentService.approvePayment(chargeId, pgToken, memberId);
         return ResponseEntity.ok("결제 및 충전이 완료되었습니다.");
     }
 
-    
 }
