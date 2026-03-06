@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/config/KakaoPayProperties.java
-package com.example.payment.config;
+package com.example.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

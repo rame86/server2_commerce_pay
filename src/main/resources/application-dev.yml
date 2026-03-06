@@ -19,13 +19,12 @@ spring:
     show-sql: true # 실행되는 SQL 로그를 보여줘
     properties:
       hibernate:
-        "[format_sql]": false # SQL 로그를 보기 좋게 정렬해
+        "[format_sql]": true # SQL 로그를 보기 좋게 정렬해
 
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml # 매퍼 XML 위치 지정
   type-aliases-package: com.example.payment.dto # DTO 패키지 경로 별칭
 
-  # 추가된 내용
 kakao:
   pay:
     secret-key: dev_secret_key_here # 개발용 시크릿 키

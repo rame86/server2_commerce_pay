@@ -22,15 +22,25 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 public class PaymentController {
-    
+
     private final PaymentService paymentService;
-    
+
     @GetMapping("/")
     public String hello() {
         return "서버가 정상적으로 실행 중!";
     }
 
     // 지갑 충전 요청
+    /*      
+     POST http://localhost/msa/pay/payment/charge
+     Content-Type: application/json
+     Authorization: Bearer ~~~~~JWT~~~~~
+     
+     {
+      "payType": "kakao_pay",
+      "chargeAmount": 30000
+     }
+     */
     @PostMapping("/charge")
     public ResponseEntity<PaymentReadyResponseDTO> chargePoint(
             @RequestHeader("X-User-Id") Long memberId,
@@ -45,11 +55,11 @@ public class PaymentController {
     @GetMapping("/success")
     public ResponseEntity<String> approvePayment(
             @RequestParam("pg_token") String pgToken,
-            @RequestParam("chargeId") UUID chargeId) {
+            @RequestParam("chargeId") UUID chargeId,
+            @RequestParam("memberId") String memberId) {
 
-        paymentService.approvePayment(chargeId, pgToken);
+        paymentService.approvePayment(chargeId, pgToken, memberId);
         return ResponseEntity.ok("결제 및 충전이 완료되었습니다.");
     }
 
-    
 }

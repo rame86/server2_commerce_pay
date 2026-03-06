@@ -8,10 +8,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.example.payment.config.KakaoPayProperties;
+import com.example.config.KakaoPayProperties;
 import com.example.payment.domain.Charge;
 import com.example.payment.dto.response.PaymentReadyResponseDTO;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class KakaoPayProvider implements PaymentProvider {
 
@@ -21,25 +24,30 @@ public class KakaoPayProvider implements PaymentProvider {
     public KakaoPayProvider(KakaoPayProperties properties) {
         this.properties = properties;
 
-        // Spring Boot 3.2+ RestClient: 공통 헤더 및 Base URL 초기화
         this.restClient = RestClient.builder()
                 .baseUrl(properties.baseUrl())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                // 카카오페이 최신 API 규격에 맞춘 인증 헤더
+                // 카카오페이 최신 API는 Secret Key를 기반으로 인증함
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "SECRET_KEY " + properties.secretKey())
                 .build();
     }
 
-    // pg사가 KAKAO_PAY일때만 사용되도록 검증
     @Override
     public boolean supports(String pgProvider) {
         return "KAKAO_PAY".equals(pgProvider);
     }
 
-    // Ready
+    /**
+     * [PAYMENT_READY] 결제 준비 단계
+     * 사용자가 결제 수단을 선택하고 카카오페이 결제 화면으로 넘어가기 전 TID 발급 및 URL 획득
+     */
     @Override
-    public PaymentReadyResponseDTO ready(Charge charge) {
-        // Map 대신 내부 Record를 사용하여 타입 안정성 확보
+    public PaymentReadyResponseDTO ready(Charge charge, Long memberId) {
+        log.info("[PAYMENT_READY] 결제 준비 요청 시작 - ChargeID: {}, Amount: {}", charge.getChargeId(), charge.getAmount());
+
+        String approvalUrlWithId = properties.approvalUrl() + "?chargeId=" + charge.getChargeId() + "&memberId=" + memberId;
+        log.info("[PAYMENT_READY] request주소 : " +approvalUrlWithId.toString());
+
         KakaoPayReadyRequest request = new KakaoPayReadyRequest(
                 properties.cid(),
                 charge.getChargeId().toString(),
@@ -49,7 +57,7 @@ public class KakaoPayProvider implements PaymentProvider {
                 charge.getAmount().intValue(),
                 0,
                 0,
-                properties.approvalUrl(),
+                approvalUrlWithId,
                 properties.cancelUrl(),
                 properties.failUrl());
 
@@ -58,32 +66,43 @@ public class KakaoPayProvider implements PaymentProvider {
                     .uri("/online/v1/payment/ready")
                     .body(request)
                     .retrieve()
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        log.error("[PAYMENT_READY] API 에러 발생 - Status: {}", res.getStatusCode());
+                        throw new IllegalStateException("카카오페이 준비 API 호출 실패");
+                    })
                     .body(KakaoPayReadyResponse.class);
 
-            // 예외 방어 로직 강화
             if (response == null || response.tid() == null) {
                 throw new IllegalStateException("카카오페이 결제 준비 응답 오류: TID 누락");
             }
 
+            log.info("[PAYMENT_READY] 결제 준비 완료 - TID: {}", response.tid());
+
             return PaymentReadyResponseDTO.builder()
                     .chargeId(charge.getChargeId())
-                    .payType("KAKAOPAY") // 파라미터 대신 구현체에서 직접 할당
+                    .payType("KAKAOPAY")
                     .nextRedirectUrl(response.next_redirect_pc_url())
                     .providerTid(response.tid())
                     .build();
 
         } catch (RestClientException e) {
-            // 통신 장애 시 구체적인 예외 전환 (추후 Custom Exception 사용 권장)
-            throw new RuntimeException("카카오페이 API 네트워크 통신 실패: " + e.getMessage(), e);
+            log.error("[PAYMENT_READY] 네트워크 통신 장애 - Message: {}", e.getMessage());
+            throw new RuntimeException("카카오페이 API 네트워크 통신 실패", e);
         }
     }
-    
-    // Approve
+
+    /**
+     * [PAYMENT_APPROVE] 결제 승인 단계
+     * 사용자가 인증을 완료한 후 전달받은 pg_token을 사용하여 최종 결제 확정
+     */
     @Override
     public void approve(Charge charge, String pgToken) {
+        log.info("[PAYMENT_APPROVE] 결제 승인 요청 시작 - ChargeID: {}, TID: {}", charge.getChargeId(),
+                charge.getPgTransactionId());
+
         KakaoPayApproveRequest request = new KakaoPayApproveRequest(
                 properties.cid(),
-                charge.getPgTransactionId(), // Ready 단계에서 받아 DB에 저장해둔 TID
+                charge.getPgTransactionId(),
                 charge.getChargeId().toString(),
                 charge.getWalletId().toString(),
                 pgToken);
@@ -93,9 +112,12 @@ public class KakaoPayProvider implements PaymentProvider {
                     .uri("/online/v1/payment/approve")
                     .body(request)
                     .retrieve()
-                    // [Self-Review] 외부 API 장애 및 잘못된 토큰 응답에 대한 예외 처리 방어
-                    .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(), (req, res) -> {
-                        throw new IllegalStateException("카카오페이 승인 거절: " + res.getStatusCode());
+                    .onStatus(status -> status.isError(), (req, res) -> {
+                        // 카카오페이가 보낸 실제 에러 응답 바디 읽기
+                        String errorBody = new String(res.getBody().readAllBytes());
+                        log.error("[PAYMENT_APPROVE] 승인 거절 또는 에러 - Status: {}, Body: {}", res.getStatusCode(),
+                                errorBody);
+                        throw new IllegalStateException("카카오페이 승인 실패: " + errorBody);
                     })
                     .body(KakaoPayApproveResponse.class);
 
@@ -103,13 +125,16 @@ public class KakaoPayProvider implements PaymentProvider {
                 throw new IllegalStateException("비정상적인 승인 응답 수신");
             }
 
+            log.info("[PAYMENT_APPROVE] 결제 최종 승인 완료 - AID: {}, TID: {}", response.aid(), response.tid());
+
         } catch (Exception e) {
-            throw new RuntimeException("카카오페이 승인 API 네트워크 통신 실패: " + e.getMessage(), e);
+            log.error("[PAYMENT_APPROVE] 네트워크 통신 장애 - Message: {}", e.getMessage());
+            throw new RuntimeException("카카오페이 승인 API 통신 실패", e);
         }
     }
-    // --- 내부 DTO 역할을 하는 Record ---
 
-    // Ready 영역
+    // --- 내부 DTO (Record) 영역 ---
+
     private record KakaoPayReadyRequest(
             String cid,
             String partner_order_id,
@@ -134,7 +159,6 @@ public class KakaoPayProvider implements PaymentProvider {
             String created_at) {
     }
 
-    // Approve 영역
     private record KakaoPayApproveRequest(
             String cid,
             String tid,

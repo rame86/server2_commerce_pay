@@ -22,30 +22,40 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Charge {
 
+    // 충전 요청 고유 ID
     @Id
     private UUID chargeId;
-    
+    // 충전 대상 지갑 ID
     private UUID walletId;
+    // PG사 이름 (KAKAOPAY, NAVERPAY 등)
     private String pgProvider;
+    // PG사 연동 거래 번호 (TID 등)
     private String pgTransactionId;
 
+    // 충전 요청 금액
     @Column(name = "amount", precision = 19, scale = 2)
     private BigDecimal amount;
-
+    // 처리 상태 (PENDING, SUCCESS, FAILED)
     private String status;
+    // 실패 시 에러 메시지
     private String errorMessage;
+    // 요청 시각
     private OffsetDateTime createdAt;
+    // 완료 시각
     private OffsetDateTime completedAt;
 
+    
     public void updateTid(String tid) {
         this.pgTransactionId = tid;
     }
 
+    // 성공 로직
     public void success() {
         this.status = "SUCCESS";
         this.completedAt = OffsetDateTime.now();
     }
 
+    // 실패 로직
     public void fail(String errorMessage) {
         this.status = "FAIL";
         this.errorMessage = errorMessage;

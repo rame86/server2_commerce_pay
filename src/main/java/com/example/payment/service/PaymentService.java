@@ -9,6 +9,6 @@ import com.example.payment.dto.response.PaymentReadyResponseDTO;
 public interface PaymentService {
     public PaymentReadyResponseDTO readyPayment(Long memberId, PaymentRequestDTO request);
 
-    public void approvePayment(UUID chargeId, String pgToken);
+    public void approvePayment(UUID chargeId, String pgToken, String memberId);
 
 }
