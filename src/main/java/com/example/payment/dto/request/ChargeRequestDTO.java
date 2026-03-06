@@ -15,6 +15,6 @@ import lombok.ToString;
 public class ChargeRequestDTO {
 
     private Long memberId; // 충전요청 member_id (지갑 조회를 위해 필수)
-    private BigDecimal Amount; // 충전 요청 금액
+    private BigDecimal amount; // 충전 요청 금액
     private String payType; // "kakao_pay", "naver_pay", "bank_transfer" 등
 }
