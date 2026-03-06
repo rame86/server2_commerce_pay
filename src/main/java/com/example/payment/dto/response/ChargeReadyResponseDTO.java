@@ -7,9 +7,9 @@ import lombok.Builder;
 
 @Builder
 public record ChargeReadyResponseDTO(
-                UUID chargeId, // 서비스 결제 고유 번호
-                String payType, // 결제 수단
-                String nextRedirectUrl, // 결제 페이지 리다이렉트 URL
-                String providerTid // PG사 트랜잭션 ID
+        UUID chargeId, // 서비스 결제 고유 번호
+        String payType, // 결제 수단
+        String nextRedirectUrl, // 결제 페이지 리다이렉트 URL
+        String providerTid // PG사 트랜잭션 ID
 ) {
 }
