@@ -3,11 +3,9 @@ package com.example.payment.controller;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -36,18 +34,27 @@ public class WalletController {
         return response;
     }
 
-    @PostMapping("charge")
-    public String pointCharge(@RequestHeader Map<String, String> headers) {
-        headers.forEach((key, val) -> {
-            log.info("키: " + key + ", 값: " + val);
-        });
-
-        String response = ("WalletController/wallet/ : " + headers.get("x-user-id") + " " + headers.get("x-role")
-                + "의 /wallet/charge 요청받음");
-
-        return response;
+        // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
+    @GetMapping("/balance")
+    public ResponseEntity<BigDecimal> getBalance(@RequestParam("member_id") Long memberId) {
+        // [Self-Review] memberId 유효성 검증 로직 추가 가능
+        BigDecimal balance = walletService.getBalance(memberId);
+        return ResponseEntity.ok(balance);
     }
 
+    // @PostMapping("charge")
+    // public String pointCharge(@RequestHeader Map<String, String> headers) {
+    //     headers.forEach((key, val) -> {
+    //         log.info("키: " + key + ", 값: " + val);
+    //     });
+
+    //     String response = ("WalletController/wallet/ : " + headers.get("x-user-id") + " " + headers.get("x-role")
+    //             + "의 /wallet/charge 요청받음");
+
+    //     return response;
+    // }
+
+    // 관리자용
     @GetMapping("/getall") // 3. HTTP GET 요청을 이 메서드와 연결
     public ResponseEntity<List<WalletResponseDTO>> getAllWallets() {
         
@@ -58,12 +65,5 @@ public class WalletController {
         return ResponseEntity.ok(wallets);
     }
 
-    // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
-    @GetMapping("/balance")
-    public ResponseEntity<BigDecimal> getBalance(@RequestParam("member_id") Long memberId) {
-        // [Self-Review] memberId 유효성 검증 로직 추가 가능
-        BigDecimal balance = walletService.getBalance(memberId);
-        return ResponseEntity.ok(balance);
-    }
 
 }

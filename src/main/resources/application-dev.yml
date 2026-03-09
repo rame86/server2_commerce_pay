@@ -2,7 +2,7 @@
 spring:
   datasource:
     # 환경 변수 없으면 지정된 IP의 DB로 붙어
-    url: jdbc:postgresql://34.158.208.117:5432/msa_pay_db?currentSchema=pay
+    url: jdbc:postgresql://34.50.7.72:5432/msa_pay_db?currentSchema=pay
     username: app_user
     password: user1234
     driver-class-name: org.postgresql.Driver # 포스트그레 드라이버 사용
