@@ -26,20 +26,20 @@ public class PaymentController {
     private final PaymentService paymentService;
 
     @GetMapping("/")
-    public String hello() {
-        return "서버가 정상적으로 실행 중!";
+    public String getMyPayment() {
+        return "페이먼트 제이터 출력";
     }
 
     // 지갑 충전 요청
-    /*      
-     POST http://localhost/msa/pay/payment/charge
-     Content-Type: application/json
-     Authorization: Bearer ~~~~~JWT~~~~~
-     
-     {
-      "payType": "kakao_pay",
-      "chargeAmount": 30000
-     }
+    /*
+     * POST http://localhost/msa/pay/payment/charge
+     * Content-Type: application/json
+     * Authorization: Bearer ~~~~~JWT~~~~~
+     * 
+     * {
+     * "payType": "kakao_pay",
+     * "chargeAmount": 30000
+     * }
      */
     @PostMapping("/charge")
     public ResponseEntity<ChargeReadyResponseDTO> chargePoint(
@@ -52,13 +52,14 @@ public class PaymentController {
     }
 
     // 카카오페이 결제 승인 콜백 (사용자 인증 완료 후 자동 리다이렉트 됨)
-    @GetMapping("/success")
+    @GetMapping("/charge/kakaopay/success")
     public ResponseEntity<String> approvePayment(
             @RequestParam("pg_token") String pgToken,
             @RequestParam("chargeId") UUID chargeId,
             @RequestParam("memberId") String memberId) {
 
         paymentService.approvePayment(chargeId, pgToken, memberId);
+
         return ResponseEntity.ok("결제 및 충전이 완료되었습니다.");
     }
 
