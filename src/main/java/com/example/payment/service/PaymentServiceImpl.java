@@ -18,6 +18,7 @@ import com.example.payment.domain.Wallet;
 import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.dto.request.ChargeRequestDTO;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
+import com.example.payment.dto.response.PaymentHistoryResponseDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
 import com.example.payment.repository.ChargeRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
@@ -49,7 +50,7 @@ public class PaymentServiceImpl implements PaymentService {
      */
     @Override
     @Transactional
-    public ChargeReadyResponseDTO readyPayment(Long memberId, ChargeRequestDTO request) {
+    public ChargeReadyResponseDTO readyPayment(Long memberId, ChargeRequestDTO request, String token) {
         log.info("[READY_PAYMENT] 요청 수신 - memberId: {}, amount: {}", memberId, request.getAmount());
 
         // 1. 사용자 지갑 조회 및 유효성 검증
@@ -81,8 +82,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             // 4. PG사 외부 API 호출하여 결제 준비 완료 (TID 발급 등)
-            ChargeReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId);
-            charge.updateTid(responseDTO.providerTid()); // 발급받은 외부 TID 저장
+            ChargeReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId, token);
+            charge.updateTid(responseDTO.providerTid());
             chargeRepository.save(charge);
 
             return responseDTO;
@@ -281,5 +282,47 @@ public class PaymentServiceImpl implements PaymentService {
             case "CREDIT_CARD" -> "CREDIT_CARD";
             default -> throw new IllegalArgumentException("지원하지 않는 결제 수단입니다: " + payType);
         };
+    }
+
+    /**
+     * [결제 내역 조회]
+     * 지갑 잔액 및 포인트 증감 내역 반환. 지갑이 없으면 신규 생성.
+     */
+    @Override
+    @Transactional // 지갑 생성이 발생할 수 있으므로 트랜잭션 처리
+    public PaymentHistoryResponseDTO getPaymentHistory(Long memberId) {
+        
+        // 1. 지갑 조회, 없으면 즉시 생성 (초기 잔액 0, 상태 ACTIVE)
+        Wallet wallet = walletRepository.findByMemberId(memberId)
+                .orElseGet(() -> {
+                    log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
+                    Wallet newWallet = Wallet.builder()
+                            .memberId(memberId)
+                            .balance(BigDecimal.ZERO)
+                            .status("ACTIVE")
+                            .build();
+                    return walletRepository.save(newWallet);
+                });
+
+        // 2. 거래 내역 최신순 조회
+        List<TransactionHistory> histories = transactionHistoryRepository
+                .findAllByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());
+
+        // 3. Entity -> DTO 변환
+        List<PaymentHistoryResponseDTO.TransactionDTO> transactionDTOs = histories.stream()
+                .map(history -> PaymentHistoryResponseDTO.TransactionDTO.builder()
+                        .transactionType(history.getTransactionType())
+                        .amount(history.getAmount())
+                        .balanceAfter(history.getBalanceAfter())
+                        .description(history.getDescription())
+                        .createdAt(history.getCreatedAt())
+                        .build())
+                .toList();
+
+        // 4. 최종 결과 조립
+        return PaymentHistoryResponseDTO.builder()
+                .currentBalance(wallet.getBalance())
+                .transactions(transactionDTOs)
+                .build();
     }
 }
