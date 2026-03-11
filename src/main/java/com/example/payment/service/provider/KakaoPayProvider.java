@@ -32,6 +32,7 @@ public class KakaoPayProvider implements PaymentProvider {
                 .build();
     }
 
+    // 요청값이 kakao_pay 일경우 실행
     @Override
     public boolean supports(String pgProvider) {
         return "KAKAO_PAY".equals(pgProvider);
@@ -42,11 +43,11 @@ public class KakaoPayProvider implements PaymentProvider {
      * 사용자가 결제 수단을 선택하고 카카오페이 결제 화면으로 넘어가기 전 TID 발급 및 URL 획득
      */
     @Override
-    public ChargeReadyResponseDTO ready(Charge charge, Long memberId) {
-        log.info("[PAYMENT_READY] 결제 준비 요청 시작 - ChargeID: {}, Amount: {}", charge.getChargeId(), charge.getAmount());
+    public ChargeReadyResponseDTO ready(Charge charge, Long memberId, String token) {
+        log.info("[PAYMENT_READY] 결제 준비 요청 - ChargeID: {}", charge.getChargeId());
 
-        String approvalUrlWithId = properties.approvalUrl() + "?chargeId=" + charge.getChargeId() + "&memberId=" + memberId;
-        log.info("[PAYMENT_READY] request주소 : " +approvalUrlWithId.toString());
+                // 대신 프론트엔드 쿠키(또는 Authorization 헤더)를 통해 Gateway가 검증하도록 함.
+        String approvalUrlWithToken = properties.approvalUrl() + "?chargeId=" + charge.getChargeId();
 
         KakaoPayReadyRequest request = new KakaoPayReadyRequest(
                 properties.cid(),
@@ -57,10 +58,11 @@ public class KakaoPayProvider implements PaymentProvider {
                 charge.getAmount().intValue(),
                 0,
                 0,
-                approvalUrlWithId,
+                approvalUrlWithToken, // 롤백주소
                 properties.cancelUrl(),
                 properties.failUrl());
 
+                
         try {
             KakaoPayReadyResponse response = restClient.post()
                     .uri("/online/v1/payment/ready")
