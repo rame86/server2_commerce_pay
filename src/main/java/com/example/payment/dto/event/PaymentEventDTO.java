@@ -5,9 +5,11 @@ import java.math.BigDecimal;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @ToString
 public class PaymentEventDTO {
@@ -16,7 +18,7 @@ public class PaymentEventDTO {
      * [이벤트 타입별 필수 Payload 규격]
      * * 1. 결제 (PAYMENT) 
      * - 공연/상품: orderId, memberId, artistId, amount, originalAmount, quantity, fee, type, eventTitle, replyRoutingKey
-     * - 후원: orderId, memberId, artistId, amount, fee, type, eventTitle, replyRoutingKey
+     * - 후원: orderId, memberId, artistId, amount, type, eventTitle, replyRoutingKey
      * * 2. 환불 (REFUND)
      * - 공통: orderId, memberId, amount, type, replyRoutingKey
      * * 3. 정산 조회 (SETTLEMENT)
