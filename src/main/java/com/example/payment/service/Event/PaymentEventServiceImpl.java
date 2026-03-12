@@ -36,6 +36,9 @@ public class PaymentEventServiceImpl implements PaymentEventService {
      */
     @Override
     public void handleEvent(PaymentEventDTO dto) {
+        if(dto.getQuantity() == null){
+            dto.setQuantity(1);
+        }
         switch (dto.getType()) {
             case "PAYMENT" -> self.processPaymentEvent(dto);
             case "REFUND" -> self.processRefundEvent(dto);

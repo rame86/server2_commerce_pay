@@ -38,7 +38,7 @@ public class SettlementServiceImpl implements SettlementService {
             return;
         }
 
-        // 3. 아티스트 계좌 조회 (없으면 신규 생성 - 시스템 구조에 따라 생략 가능)
+        // 3. 아티스트 계좌 조회 (없으면 신규 생성 - 시스템 구조에 따라 생략 가능) [cite: 180]
         ArtistAccount account = artistAccountRepository.findById(dto.getArtistId())
                 .orElseGet(() -> {
                     ArtistAccount newAccount = ArtistAccount.builder()
@@ -49,7 +49,7 @@ public class SettlementServiceImpl implements SettlementService {
 
         // 4. 정산 금액 계산 (절댓값으로 기준을 잡은 후 부호 결정)
         // 상품 원가 (gross_amount)는 originalPrice 사용
-        BigDecimal baseAmount = dto.getAmount();
+        BigDecimal baseAmount = dto.getOriginalPrice().multiply(BigDecimal.valueOf(dto.getQuantity()));
         BigDecimal grossAmount = baseAmount.abs();
 
         // 플랫폼 수수료 (fee_amount) 계산
