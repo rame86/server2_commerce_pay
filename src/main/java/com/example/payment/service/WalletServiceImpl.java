@@ -73,12 +73,12 @@ public class WalletServiceImpl implements WalletService {
         // 결제내역 저장
         recordTransaction(
             wallet.getWalletId(), 
-            dto.getType() != null ? dto.getType() : "PAYMENT", 
+            dto.getType(), 
             dto.getAmount().negate(), 
             newBalance, 
             dto.getOrderId(), 
             dto.getEventTitle() != null ? dto.getEventTitle() : "결제 차감",
-            dto.getOriginalAmount(),
+            dto.getOriginalPrice(), 
             dto.getFee(),
             dto.getShippingFee(),
             dto.getQuantity(),
@@ -125,16 +125,16 @@ public class WalletServiceImpl implements WalletService {
         // 환불내역 저장
         recordTransaction(
             walletId, 
-            "REFUND", 
+            dto.getType(), 
             refundAmount, 
             newBalance, 
             dto.getOrderId(), 
             dto.getEventTitle() != null ? dto.getEventTitle() : "결제 취소 환불",
-            null, 
-            null, 
-            null, 
-            null, 
-            paymentTx.getArtistId()
+            dto.getOriginalPrice(), 
+            dto.getFee(),
+            dto.getShippingFee(),
+            dto.getQuantity(),
+            dto.getArtistId()
         );
     }
 

@@ -33,6 +33,12 @@ kakao:
     # 선언한 변수를 참조하여 URL 구성
     approval-url: ${kakao.pay.client-base-url}/payment/success
     cancel-url: ${kakao.pay.client-base-url}/payment/cancel
-    fail-url: ${kakao.pay.client-base-url}/payment/fail
-    frontend-wallet-url: ${FRONTEND_WALLET_URL:http://34.64.85.123/user/wallet}    
-    base-url: https://open-api.kakaopay.com
+    fail-url: ${kakao.pay.client-base-url}/payment/fail    
+    kakaopay-base-url: https://open-api.kakaopay.com
+
+payment:
+  url:
+    wallet: ${FRONTEND_WALLET_URL:http://34.64.85.123/user/wallet}
+    success: ${FRONTEND_SUCCESS_URL:http://34.64.85.123/user/payment-success.html}
+    fail: ${FRONTEND_FAIL_URL:http://34.64.85.123/user/payment-fail.html}
+    cancel: ${FRONTEND_CANCEL_URL:http://34.64.85.123/user/payment-cancel.html}

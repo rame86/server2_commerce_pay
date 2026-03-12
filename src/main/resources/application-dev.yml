@@ -37,8 +37,10 @@ kakao:
     approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
     cancel-url: ${kakao.pay.client-base-url}/payment/cancel
     fail-url: ${kakao.pay.client-base-url}/payment/fail
-    
-    # 프론트엔드 관련 리다이렉션 URL
-    frontend-wallet-url: http://localhost/user/wallet
-    frontend-redirect-url: http://localhost/user/payment-progress
-    payment-success-url: http://localhost/user/payment-success
+
+payment:
+  url:
+    wallet: http://localhost/user/wallet
+    success: http://localhost/user/payment-success.html
+    fail: http://localhost/user/payment-fail.html
+    cancel: http://localhost/user/payment-cancel.html
