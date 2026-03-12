@@ -22,11 +22,11 @@ public class PaymentEventListener {
      * 지정된 큐를 구독하고 서비스 계층으로 처리를 위임
      */
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
-    public void receiveMessage(PaymentEventDTO requestDTO) {
-        log.info("[MQ 수신] 타입: {}, 주문번호: {}", requestDTO.getType(), requestDTO.getOrderId());
+    public void receiveMessage(PaymentEventDTO dto) {
+        log.info("[MQ 수신] 타입: {}, 주문번호: {}", dto.getType(), dto.getOrderId());
 
         // 서비스 계층의 통합 이벤트 핸들러 호출
-        paymentService.handleEvent(requestDTO);
+        paymentService.handleEvent(dto);
     }
 
     /**

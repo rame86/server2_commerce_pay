@@ -1,6 +1,8 @@
 //src/main/java/com/example/payment/service/PaymentServiceImpl.java
 package com.example.payment.service.Event;
 
+import java.math.BigDecimal;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -66,6 +68,9 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processRefundEvent(PaymentEventDTO dto) {
+
+        log.info(">>> [PAYMENT] 결제 요청 수신 데이터: {}", dto);
+
         executeWithStatusUpdate(dto, "REFUNDED", "환불 성공", () -> {
             // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processRefund(dto);
@@ -78,8 +83,15 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processDonationEvent(PaymentEventDTO dto) {
+        
+        dto.setFee(BigDecimal.valueOf(20));
+
+        log.info(">>> [DONATION] 결제 요청 수신 데이터: {}", dto);
         executeWithStatusUpdate(dto, "COMPLETE", "후원 성공", () -> {
+             // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processPayment(dto);
+             // 2. 아티스트 정산 데이터 기록 및 잔액 업데이트
+            settlementService.processSettlement(dto);
             return null;
         });
     }
