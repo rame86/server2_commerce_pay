@@ -14,11 +14,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.config.FrontendUrlProperties;
 import com.example.config.KakaoPayProperties;
 import com.example.payment.dto.request.ChargeRequestDTO;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.dto.response.PaymentHistoryResponseDTO;
-import com.example.payment.service.PaymentService;
+import com.example.payment.service.ChargeService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,79 +28,78 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class PaymentController {
 
-    private final PaymentService paymentService;
-    private final KakaoPayProperties kakaoPayProperties;
+    // 헤더 및 파라미터 상수화
+    private static final String USER_ID_HEADER = "x-user-id";
+    private static final String PARAM_PG_TOKEN = "pg_token";
+    private static final String PARAM_CHARGE_ID = "chargeId";
 
-    // 결제 내역 및 지갑 정보 조회
+    private final ChargeService chargeService;
+    private final KakaoPayProperties kakaoPayProperties;
+    private final FrontendUrlProperties frontendUrl;
+
+    /**
+     * [결제 내역 및 지갑 정보 조회]
+     */
     @GetMapping("/")
     public ResponseEntity<PaymentHistoryResponseDTO> getMyPayment(
-            @RequestHeader("X-User-Id") Long memberId) {
+            @RequestHeader(USER_ID_HEADER) Long memberId) {
 
-        PaymentHistoryResponseDTO response = paymentService.getPaymentHistory(memberId);
+        PaymentHistoryResponseDTO response = chargeService.getPaymentHistory(memberId);
         return ResponseEntity.ok(response);
     }
 
-    // 지갑 충전 요청
-    /*
-     * POST http://localhost/msa/pay/payment/charge
-     * Content-Type: application/json
-     * Authorization: Bearer ~~~~~JWT~~~~~
-     * 
-     * {
-     * "payType": "kakao_pay",
-     * "amount": 30000
-     * }
+    /**
+     * [지갑 포인트 충전 준비 요청]
      */
     @PostMapping("/charge")
     public ResponseEntity<ChargeReadyResponseDTO> chargePoint(
-            @RequestHeader("X-User-Id") Long memberId,
+            @RequestHeader(USER_ID_HEADER) Long memberId,
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ChargeRequestDTO request) {
 
-        // Authorization 헤더에서 Bearer를 제외한 순수 토큰만 추출
         String token = "";
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
         }
 
-        // 서비스로 토큰도 같이 넘김
-        ChargeReadyResponseDTO response = paymentService.readyPayment(memberId, request, token);
+        ChargeReadyResponseDTO response = chargeService.readyPayment(memberId, request, token);
         return ResponseEntity.ok(response);
     }
 
-    // 결제 성공
+    /**
+     * [결제 승인 처리 (PG사 콜백)]
+     */
     @GetMapping("/charge/kakaopay/success")
     public ResponseEntity<Void> approvePayment(
-            @RequestParam("pg_token") String pgToken,
-            @RequestParam("chargeId") UUID chargeId,
-            @RequestHeader("X-User-Id") String memberId) {
+            @RequestParam(PARAM_PG_TOKEN) String pgToken,
+            @RequestParam(PARAM_CHARGE_ID) UUID chargeId,
+            @RequestHeader(USER_ID_HEADER) String memberId) {
 
-        paymentService.approvePayment(chargeId, pgToken, memberId);
+        chargeService.approvePayment(chargeId, pgToken, memberId);
 
-        // 프론트엔드의 결제 성공 처리 전용 HTML 페이지로 리다이렉트
-        String baseUrl = kakaoPayProperties.frontendWalletUrl().replace("/user/wallet", "");
-        String successPageUrl = baseUrl + "/payment-success.html";
-        
+        // yml에서 주입받은 URL을 바로 사용
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(successPageUrl))
+                .location(URI.create(frontendUrl.success()))
                 .build();
     }
 
-    // 결제 실패 시 리다이렉트
+    /**
+     * [결제 실패 리다이렉트]
+     */
     @GetMapping("/charge/kakaopay/fail")
     public ResponseEntity<Void> failPayment() {
-        String baseUrl = kakaoPayProperties.frontendWalletUrl().replace("/user/wallet", "");
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(baseUrl + "/payment-fail.html"))
+                .location(URI.create(frontendUrl.fail()))
                 .build();
     }
 
-    // 결제 취소 시 리다이렉트
+    /**
+     * [결제 취소 리다이렉트]
+     */
     @GetMapping("/charge/kakaopay/cancel")
     public ResponseEntity<Void> cancelPayment() {
-        String baseUrl = kakaoPayProperties.frontendWalletUrl().replace("/user/wallet", "");
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(baseUrl + "/payment-cancel.html"))
+                .location(URI.create(frontendUrl.cancel()))
                 .build();
     }
 }
