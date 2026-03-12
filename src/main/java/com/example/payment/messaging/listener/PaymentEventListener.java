@@ -24,8 +24,13 @@ public class PaymentEventListener {
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentEventDTO requestDTO) {
         log.info("[MQ 수신] 타입: {}, 주문번호: {}", requestDTO.getType(), requestDTO.getOrderId());
-        
+
         // 서비스 계층의 통합 이벤트 핸들러 호출
         paymentService.handleEvent(requestDTO);
     }
+
+    /**
+     * 
+     */
+
 }

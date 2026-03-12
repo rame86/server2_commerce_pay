@@ -1,4 +1,4 @@
-// src/main/java/com/example/payment/dto/event/PaymentRequestDTO.java
+// src/main/java/com/example/payment/dto/event/PaymentEventDTO.java
 package com.example.payment.dto.event;
 
 import java.math.BigDecimal;
@@ -7,24 +7,36 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
-// RabbitMQ를 통해 전달받는 결제 요청 데이터 포장지
-
 @Getter
-@NoArgsConstructor // Jackson 컨버터가 JSON 역직렬화를 할 때 기본 생성자가 반드시 필요.
-@ToString // 수신 확인용 로그를 찍을 때 객체 안의 값을 보기 위해 추가.
+@NoArgsConstructor
+@ToString
 public class PaymentEventDTO {
 
-    // JSON의 Key 값과 변수명이 정확히 일치해야 자동 매핑.
-    private String orderId; // 주문아이디
-    private Long memberId; // 결제자 member_id (지갑 조회를 위해 필수)
-    private BigDecimal amount; // 총 결제 혹은 환불 요청 금액
-    private String type; // 요청 타입 (결제 or 환불 or 후원)
-    private String eventTitle; // 결제 상세 내역에 기록 내용(공연명 or 상품명 or 후원내역)
-    private Long artistId;
-    private String replyRoutingKey; // 요청한 서비스가 응답받길 원하는 라우팅 키
+    /* ==========================================
+     * [이벤트 타입별 필수 Payload 규격]
+     * * 1. 결제 (PAYMENT) 
+     * - 공연/상품: orderId, memberId, amount, originalAmount, quantity, fee, type, eventTitle, replyRoutingKey
+     * - 후원: orderId, memberId, artistId, amount, type, eventTitle, replyRoutingKey
+     * * 2. 환불 (REFUND)
+     * - 공통: orderId, memberId, amount, type, replyRoutingKey
+     * * 3. 정산 조회 (SETTLEMENT)
+     * - 공통: artistId, type, replyRoutingKey
+     * ========================================== */
 
-    public String getReservationId() {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
-        
+    // === [공통 및 식별 정보] ===
+    private String type;             // 요청 타입 (PAYMENT, REFUND, DONATION, SETTLEMENT)
+    private String orderId;          // 주문/예약 번호 (환불 시 원본 결제건 조회용)
+    private Long memberId;           // 사용자 ID
+    private String replyRoutingKey;  // 응답받을 라우팅 키
+
+    // === [금액 및 수량 정보] ===
+    private BigDecimal amount;         // 실제 결제/환불 변동 금액
+    private BigDecimal originalAmount; // 원가 (할인 전 금액)
+    private Integer quantity;          // 구매/예매 수량
+    private BigDecimal fee;            // 플랫폼 수수료
+    private BigDecimal shippingFee;    // 배송비
+
+    // === [메타 데이터] ===
+    private Long artistId;           // 후원 대상 아티스트 또는 정산 대상 ID
+    private String eventTitle;       // 거래 내역에 기록될 상세 내용 (공연명, 상품명 등)
 }

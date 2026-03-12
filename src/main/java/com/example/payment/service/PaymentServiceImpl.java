@@ -45,7 +45,7 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentServiceImpl self; // 트랜잭션 전파(Propagation) 처리를 위한 자기 참조
 
     /**
-     * [결제 충전 준비] 
+     * [결제 충전 준비]
      * PG사 결제 요청 전, 지갑 상태를 검증하고 충전 원장(Charge)을 생성함
      */
     @Override
@@ -98,7 +98,7 @@ public class PaymentServiceImpl implements PaymentService {
      * [결제 승인 처리]
      * 사용자가 결제 인증을 마친 후, PG사에 실제 승인 확정 요청을 보냄
      */
-    @Override    
+    @Override
     public void approvePayment(UUID chargeId, String pgToken, String memberId) {
         log.info("[APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);
 
@@ -119,7 +119,7 @@ public class PaymentServiceImpl implements PaymentService {
         try {
             // 3. PG사 외부 API 호출 (실제 결제 확정)
             selectedProvider.approve(charge, pgToken);
-            
+
             // 4. 내부 DB 반영 (별도 트랜잭션 호출)
             self.processApprovalSuccess(chargeId, memberId);
         } catch (Exception e) {
@@ -185,6 +185,7 @@ public class PaymentServiceImpl implements PaymentService {
             case "PAYMENT" -> self.processPaymentEvent(dto);
             case "REFUND" -> self.processRefundEvent(dto);
             case "DONATION" -> self.processDonationEvent(dto);
+            case "SETTLEMENT" -> self.processDonationEvent(dto);
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
@@ -197,7 +198,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void processPaymentEvent(PaymentEventDTO dto) {
         executeWithStatusUpdate(dto, "COMPLETE", "결제 성공", () -> {
-            walletService.processPayment(dto.getMemberId(), dto.getOrderId(), dto.getAmount());
+            walletService.processPayment(dto);
             return null;
         });
     }
@@ -210,7 +211,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void processRefundEvent(PaymentEventDTO dto) {
         executeWithStatusUpdate(dto, "REFUNDED", "환불 성공", () -> {
-            walletService.processRefund(dto.getOrderId());
+            walletService.processRefund(dto);
             return null;
         });
     }
@@ -223,7 +224,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public void processDonationEvent(PaymentEventDTO dto) {
         executeWithStatusUpdate(dto, "COMPLETE", "후원 성공", () -> {
-            walletService.processPayment(dto.getMemberId(), dto.getOrderId(), dto.getAmount());
+            walletService.processPayment(dto);
             return null;
         });
     }
@@ -232,7 +233,8 @@ public class PaymentServiceImpl implements PaymentService {
      * [이벤트 처리 공통 템플릿]
      * 비즈니스 로직 전후로 MQ 상태 업데이트(PROCESSING -> SUCCESS/FAIL)를 처리함
      */
-    private void executeWithStatusUpdate(PaymentEventDTO dto, String successStatus, String successMsg, java.util.concurrent.Callable<Void> businessLogic) {
+    private void executeWithStatusUpdate(PaymentEventDTO dto, String successStatus, String successMsg,
+            java.util.concurrent.Callable<Void> businessLogic) {
         String replyKey = dto.getReplyRoutingKey();
         String orderId = dto.getOrderId();
         String type = dto.getType();
@@ -241,8 +243,6 @@ public class PaymentServiceImpl implements PaymentService {
             // 1. 처리 중 상태 알림
             producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "처리 중입니다.", type);
             
-            Thread.sleep(1000); // 처리 시뮬레이션
-
             // 2. 핵심 로직 실행
             businessLogic.call();
 
@@ -291,7 +291,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional // 지갑 생성이 발생할 수 있으므로 트랜잭션 처리
     public PaymentHistoryResponseDTO getPaymentHistory(Long memberId) {
-        
+
         // 1. 지갑 조회, 없으면 즉시 생성 (초기 잔액 0, 상태 ACTIVE)
         Wallet wallet = walletRepository.findByMemberId(memberId)
                 .orElseGet(() -> {
