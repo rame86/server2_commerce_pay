@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
+import com.example.payment.service.SettlementService;
 import com.example.payment.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,7 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     // Charge 관련 Repository 의존성 모두 제거
     private final WalletService walletService;
     private final PaymentEventProducer producer;
+    private final SettlementService settlementService;
 
     @Lazy
     @Autowired
@@ -46,7 +48,10 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Transactional
     public void processPaymentEvent(PaymentEventDTO dto) {
         executeWithStatusUpdate(dto, "COMPLETE", "결제 성공", () -> {
+            // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processPayment(dto);
+            // 2. 아티스트 정산 데이터 기록 및 잔액 업데이트
+            settlementService.processSettlement(dto);
             return null;
         });
     }
@@ -55,7 +60,10 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Transactional
     public void processRefundEvent(PaymentEventDTO dto) {
         executeWithStatusUpdate(dto, "REFUNDED", "환불 성공", () -> {
+            // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processRefund(dto);
+            // 2. 아티스트 정산 데이터 기록 및 잔액 업데이트
+            settlementService.processSettlement(dto);
             return null;
         });
     }
