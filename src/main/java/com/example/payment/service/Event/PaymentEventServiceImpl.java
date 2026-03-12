@@ -1,5 +1,5 @@
 //src/main/java/com/example/payment/service/PaymentServiceImpl.java
-package com.example.payment.service;
+package com.example.payment.service.Event;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
+import com.example.payment.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PaymentServiceImpl implements PaymentService {
+public class PaymentEventServiceImpl implements PaymentEventService {
 
     // Charge 관련 Repository 의존성 모두 제거
     private final WalletService walletService;
@@ -23,7 +24,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Lazy
     @Autowired
-    private PaymentServiceImpl self;
+    private PaymentEventServiceImpl self;
 
     /**
      * [메시지 이벤트 핸들러]
@@ -34,7 +35,9 @@ public class PaymentServiceImpl implements PaymentService {
         switch (dto.getType()) {
             case "PAYMENT" -> self.processPaymentEvent(dto);
             case "REFUND" -> self.processRefundEvent(dto);
-            case "DONATION", "SETTLEMENT" -> self.processDonationEvent(dto); // SETTLEMENT 통합 처리
+            case "DONATION" -> self.processDonationEvent(dto); // SETTLEMENT 통합 처리
+            case "SETTLEMENT" -> self.processSettlement(dto); // SETTLEMENT 통합 처리
+
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
@@ -66,6 +69,11 @@ public class PaymentServiceImpl implements PaymentService {
         });
     }
 
+    @Override
+    public void processSettlement(PaymentEventDTO dto) {
+
+    };
+
     /**
      * [이벤트 처리 공통 템플릿]
      * 비즈니스 로직 전후로 MQ 상태 업데이트(PROCESSING -> SUCCESS/FAIL)를 처리함
@@ -77,11 +85,11 @@ public class PaymentServiceImpl implements PaymentService {
         String type = dto.getType();
 
         try {
-            producer.sendStatusUpdate(replyKey, orderId, "PROCESSING", "처리 중입니다.", type);
+            producer.sendDataResponse(replyKey, orderId, "PROCESSING", "처리 중입니다.", type, null);
 
             businessLogic.call();
 
-            producer.sendStatusUpdate(replyKey, orderId, successStatus, successMsg, type);
+            producer.sendDataResponse(replyKey, orderId, successStatus, successMsg, type, null);
             log.info("[{}] 처리 완료 - 주문번호: {}", type, orderId);
 
         } catch (InterruptedException e) {
@@ -94,6 +102,7 @@ public class PaymentServiceImpl implements PaymentService {
 
     private void handleEventError(PaymentEventDTO dto, String errorMsg, Exception e) {
         log.error("[{}] 처리 실패 - 주문번호: {}, 사유: {}", dto.getType(), dto.getOrderId(), errorMsg);
-        producer.sendStatusUpdate(dto.getReplyRoutingKey(), dto.getOrderId(), "FAIL", errorMsg, "ERROR");
+        producer.sendDataResponse(dto.getReplyRoutingKey(), dto.getOrderId(), "FAIL", errorMsg, "ERROR", null);
     }
+
 }

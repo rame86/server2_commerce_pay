@@ -1,9 +1,9 @@
 //src/main/java/com/example/payment/service/PaymentService.java
-package com.example.payment.service;
+package com.example.payment.service.Event;
 
 import com.example.payment.dto.event.PaymentEventDTO;
 
-public interface PaymentService {
+public interface PaymentEventService {
     // 통합 이벤트 핸들러 (MQ 메시지 소비용)
     void handleEvent(PaymentEventDTO dto);
     
@@ -11,4 +11,5 @@ public interface PaymentService {
     void processPaymentEvent(PaymentEventDTO dto);
     void processRefundEvent(PaymentEventDTO dto);
     void processDonationEvent(PaymentEventDTO dto);
+    void processSettlement(PaymentEventDTO dto);
 }
