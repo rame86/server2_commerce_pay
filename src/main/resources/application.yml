@@ -4,6 +4,13 @@ spring:
     name: payment-service # 서비스 이름 설정
   profiles:
     active: dev # 기본적으로 dev 프로파일로 실행해
+  rabbitmq:
+    listener:
+      simple:
+        retry:
+          enabled: true
+          max-attempts: 3 # 3번까지만 시도하고 포기
+        default-requeue-rejected: false # 에러 발생 시 재입고 안 함 (DLQ 설정 시 유용)
 
 server:
   port: 8083 # 로컬 Nginx랑 맞춘 포트 번호야

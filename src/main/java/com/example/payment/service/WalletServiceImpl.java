@@ -92,9 +92,7 @@ public class WalletServiceImpl implements WalletService {
         TransactionHistory paymentTx = transactionRepository.findTopByReferenceIdAndTransactionType(dto.getOrderId(),
                 "PAYMENT");
         if (paymentTx == null) {
-            log.error("원본 결제 내역 없음 - 주문번호: {}", dto.getOrderId());
-            // 이 예외를 던지면 RabbitMQ가 메시지를 다시 큐에 넣지 않음.
-            throw new org.springframework.amqp.AmqpRejectAndDontRequeueException("원본 결제 내역을 찾을 수 없어 처리를 중단합니다.");
+            throw new IllegalArgumentException("원본 결제 내역을 찾을 수 없습니다.");
         }
 
         // 멱등성 보장: 이미 환불된 내역인지 확인
