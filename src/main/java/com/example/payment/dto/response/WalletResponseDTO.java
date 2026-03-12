@@ -6,21 +6,18 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
 
-@Getter
-@Setter
+/**
+ * 지갑 정보 응답 DTO (Record + Builder)
+ */
 @Builder
-public class WalletResponseDTO {
-    private UUID walletId;
-    private Long memberId;
-
-    private BigDecimal balance; // NUMERIC 매핑을 위해 BigDecimal 사용
-
-    private String status;
-    private Integer version;
-    private OffsetDateTime createdAt; // 타입 변경
-    private OffsetDateTime updatedAt; // 타입 변경
-
+public record WalletResponseDTO(
+    UUID walletId,
+    Long memberId,
+    BigDecimal balance,
+    String status,
+    Integer version,
+    OffsetDateTime createdAt,
+    OffsetDateTime updatedAt
+) {
 }

@@ -1,6 +1,5 @@
 package com.example.payment.controller;
 
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -28,13 +27,14 @@ public class WalletController {
     @GetMapping("/")
     public String getWallet(
             @RequestHeader("x-user-id") Long userId,
-            @RequestHeader("x-role") String role) {
+            @RequestHeader("x-role") String role,
+            @RequestHeader("x-user-name") String name) {
 
-        String response = ("WalletController/wallet/ : " + userId + " " + role + "의 /wallet/ 요청받음");
+        String response = ("WalletController/wallet/ : " + userId + " " + role +" "+name+ "님의 /wallet/ 요청받음");
         return response;
     }
 
-        // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
+    // 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 잔액 조회
     @GetMapping("/balance")
     public ResponseEntity<BigDecimal> getBalance(@RequestParam("member_id") Long memberId) {
         // [Self-Review] memberId 유효성 검증 로직 추가 가능
@@ -42,28 +42,15 @@ public class WalletController {
         return ResponseEntity.ok(balance);
     }
 
-    // @PostMapping("charge")
-    // public String pointCharge(@RequestHeader Map<String, String> headers) {
-    //     headers.forEach((key, val) -> {
-    //         log.info("키: " + key + ", 값: " + val);
-    //     });
-
-    //     String response = ("WalletController/wallet/ : " + headers.get("x-user-id") + " " + headers.get("x-role")
-    //             + "의 /wallet/charge 요청받음");
-
-    //     return response;
-    // }
-
     // 관리자용
     @GetMapping("/getall") // 3. HTTP GET 요청을 이 메서드와 연결
     public ResponseEntity<List<WalletResponseDTO>> getAllWallets() {
-        
+
         // 서비스 계층에서 DB의 모든 지갑 정보를 가져옴
         List<WalletResponseDTO> wallets = walletService.getAllWallets();
-        
+
         // 4. ResponseEntity를 사용하여 200 OK 상태 코드와 함께 데이터를 반환
         return ResponseEntity.ok(wallets);
     }
-
 
 }

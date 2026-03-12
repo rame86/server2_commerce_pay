@@ -4,6 +4,7 @@ package com.example.payment.service;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.dto.response.WalletResponseDTO;
 
 public interface WalletService {
@@ -15,10 +16,10 @@ public interface WalletService {
     BigDecimal getBalance(Long memberId);
 
     // 결제 처리 (잔액 차감 및 원장 기록)
-    void processPayment(Long memberId, String orderId, BigDecimal amount);
+    void processPayment(PaymentEventDTO dto);
 
     // 환불 처리 (잔액 복구 및 원장 기록)
-    void processRefund(String orderId);
+    void processRefund(PaymentEventDTO dto);
 
     // 잔액 변동시 레디스 업데이트
     void updateRedisBalance(Long memberId, BigDecimal balance);
