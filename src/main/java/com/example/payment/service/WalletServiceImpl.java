@@ -72,25 +72,25 @@ public class WalletServiceImpl implements WalletService {
 
         // 결제내역 저장
         recordTransaction(
-            wallet.getWalletId(), 
-            dto.getType(), 
-            dto.getAmount().negate(), 
-            newBalance, 
-            dto.getOrderId(), 
-            dto.getEventTitle() != null ? dto.getEventTitle() : "결제 차감",
-            dto.getOriginalPrice(), 
-            dto.getFee(),
-            dto.getShippingFee(),
-            dto.getQuantity(),
-            dto.getArtistId()
-        );
+                wallet.getWalletId(),
+                dto.getType(),
+                dto.getAmount().negate(),
+                newBalance,
+                dto.getOrderId(),
+                dto.getEventTitle() != null ? dto.getEventTitle() : "결제 차감",
+                dto.getOriginalPrice(),
+                dto.getFee(),
+                dto.getShippingFee(),
+                dto.getQuantity(),
+                dto.getArtistId());
     }
 
     @Override
     @Transactional
     public void processRefund(PaymentEventDTO dto) {
         // 원본 결제 내역 검증
-        TransactionHistory paymentTx = transactionRepository.findTopByReferenceIdAndTransactionType(dto.getOrderId(), "PAYMENT");
+        TransactionHistory paymentTx = transactionRepository.findTopByReferenceIdAndTransactionType(dto.getOrderId(),
+                "PAYMENT");
         if (paymentTx == null) {
             throw new IllegalArgumentException("원본 결제 내역을 찾을 수 없습니다.");
         }
@@ -124,25 +124,24 @@ public class WalletServiceImpl implements WalletService {
 
         // 환불내역 저장
         recordTransaction(
-            walletId, 
-            dto.getType(), 
-            refundAmount, 
-            newBalance, 
-            dto.getOrderId(), 
-            dto.getEventTitle() != null ? dto.getEventTitle() : "결제 취소 환불",
-            dto.getOriginalPrice(), 
-            dto.getFee(),
-            dto.getShippingFee(),
-            dto.getQuantity(),
-            dto.getArtistId()
-        );
+                walletId,
+                dto.getType(),
+                refundAmount,
+                newBalance,
+                dto.getOrderId(),
+                dto.getEventTitle() != null ? dto.getEventTitle() : "결제 취소 환불",
+                dto.getOriginalPrice(),
+                dto.getFee(),
+                dto.getShippingFee(),
+                dto.getQuantity(),
+                dto.getArtistId());
     }
 
     // 트랜잭션 원장 기록 공통 메서드
     private void recordTransaction(UUID walletId, String type, BigDecimal amount, BigDecimal balanceAfter,
-            String referenceId, String description, BigDecimal originalAmount, BigDecimal fee, 
+            String referenceId, String description, BigDecimal originalAmount, BigDecimal fee,
             BigDecimal shippingFee, Integer quantity, Long artistId) {
-            
+
         TransactionHistory th = TransactionHistory.builder()
                 .walletId(walletId)
                 .transactionType(type)

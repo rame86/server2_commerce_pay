@@ -1,7 +1,16 @@
 package com.example.payment.domain;
 
 import java.math.BigDecimal;
-import jakarta.persistence.*;
+import java.time.OffsetDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -25,6 +34,14 @@ public class ArtistAccount {
 
     @Version
     private Integer version;
+
+    @CreationTimestamp // INSERT 시 자동 입력
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
+
+    @UpdateTimestamp // UPDATE 시 자동 갱신
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
 
     @Builder // 필요한 필드만 받는 생성자에 빌더 적용
     public ArtistAccount(Long artistId, BigDecimal totalBalance, BigDecimal withdrawableBalance) {
