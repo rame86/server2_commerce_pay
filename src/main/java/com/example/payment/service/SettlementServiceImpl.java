@@ -32,9 +32,9 @@ public class SettlementServiceImpl implements SettlementService {
             return;
         }
 
-        // 2. 멱등성 보장: 동일한 주문 번호(order_id)로 이미 정산되었는지 확인 [cite: 226]
-        if (ledgerRepository.existsByOrderId(dto.getOrderId())) {
-            log.info("이미 정산 처리된 주문입니다. 주문번호: {}", dto.getOrderId());
+        // 2. 멱등성 보장: 동일한 주문 번호(orderId)와 거래 타입(PAYMENT/REFUND)으로 이미 처리되었는지 확인
+        if (ledgerRepository.existsByOrderIdAndRevenueType(dto.getOrderId(), dto.getType())) {
+            log.info("이미 처리된 주문입니다. 주문번호: {}, 타입: {}", dto.getOrderId(), dto.getType());
             return;
         }
 
@@ -47,20 +47,31 @@ public class SettlementServiceImpl implements SettlementService {
                     return artistAccountRepository.save(newAccount);
                 });
 
-        // 4. 정산 금액 계산
-        // 상품 원가 (gross_amount)는 originalPrice 사용 [cite: 193]
-        BigDecimal grossAmount = dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getAmount();
+        // 4. 정산 금액 계산 (절댓값으로 기준을 잡은 후 부호 결정)
+        // 상품 원가 (gross_amount)는 originalPrice 사용
+        BigDecimal baseAmount = dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getAmount();
+        BigDecimal grossAmount = baseAmount.abs();
 
         // 플랫폼 수수료 (fee_amount) 계산
         BigDecimal feeRate = dto.getFee() != null
                 ? dto.getFee().divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         BigDecimal feeAmount = grossAmount.multiply(feeRate);
-
-        // 아티스트 실제 정산액 (net_amount) = gross_amount - fee_amount [cite: 195]
+        // 아티스트 실제 정산액 (net_amount) = gross_amount - fee_amount
         BigDecimal netAmount = grossAmount.subtract(feeAmount);
 
-        // 5. 정산 내역 원장 기록 [cite: 188]
+        // 환불(REFUND)인 경우 아티스트 정산액에서 차감하기 위해 음수로 변환
+        if ("REFUND".equals(dto.getType())) {
+            grossAmount = grossAmount.negate();
+            feeAmount = feeAmount.negate();
+            netAmount = netAmount.negate();
+            log.info("환불 차감 금액(netAmount): {}", netAmount);
+        } else {
+            log.info("결제 정산 금액(netAmount): {}", netAmount);
+        }
+
+        log.info("netAmount = 실제 정산금액: {}", netAmount);
+        // 5. 정산 내역 원장 기록
         Ledger ledger = Ledger.builder()
                 .artistId(dto.getArtistId())
                 .orderId(dto.getOrderId())
@@ -68,13 +79,13 @@ public class SettlementServiceImpl implements SettlementService {
                 .grossAmount(grossAmount)
                 .feeAmount(feeAmount)
                 .netAmount(netAmount)
-                .status("COMPLETED") // 기본 상태 [cite: 196]
-                .eventTitle(dto.getEventTitle()) // 내역서 표기용 상세 내용 [cite: 197]
+                .status("COMPLETED") // 기본 상태
+                .eventTitle(dto.getEventTitle()) // 내역서 표기용 상세 내용
                 .build();
 
         ledgerRepository.save(ledger);
 
-        // 6. 아티스트 계좌 총 누적액 및 출금 가능 잔액 업데이트 [cite: 181, 182]
+        // 6. 아티스트 계좌 총 누적액 및 출금 가능 잔액 업데이트
         account.addBalances(netAmount);
     }
 }
