@@ -42,8 +42,8 @@ public class PaymentEventServiceImpl implements PaymentEventService {
         switch (dto.getType()) {
             case "PAYMENT" -> self.processPaymentEvent(dto);
             case "REFUND" -> self.processRefundEvent(dto);
-            case "DONATION" -> self.processDonationEvent(dto); // SETTLEMENT 통합 처리
-            case "SETTLEMENT" -> self.processSettlement(dto); // SETTLEMENT 통합 처리
+            case "DONATION" -> self.processDonationEvent(dto);
+            case "SETTLEMENT" -> self.processSettlement(dto); 
 
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
