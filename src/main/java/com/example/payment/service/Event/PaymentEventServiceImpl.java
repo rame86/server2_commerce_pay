@@ -47,6 +47,13 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processPaymentEvent(PaymentEventDTO dto) {
+        if(dto.getFee() == null) {
+            log.error("수수료 정보가 없습니다. 주문번호: {}", dto.getOrderId());
+            return;
+        }
+        
+        log.info(">>> [PAYMENT] 결제 요청 수신 데이터: {}", dto);
+
         executeWithStatusUpdate(dto, "COMPLETE", "결제 성공", () -> {
             // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processPayment(dto);
