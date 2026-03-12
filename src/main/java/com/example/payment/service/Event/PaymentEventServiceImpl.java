@@ -88,6 +88,7 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     public void processDonationEvent(PaymentEventDTO dto) {
         
         dto.setFee(BigDecimal.valueOf(20));
+        dto.setOriginalPrice(dto.getAmount());
 
         log.info(">>> [DONATION] 결제 요청 수신 데이터: {}", dto);
         executeWithStatusUpdate(dto, "COMPLETE", "후원 성공", () -> {
