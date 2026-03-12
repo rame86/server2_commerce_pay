@@ -25,7 +25,7 @@ public class KakaoPayProvider implements PaymentProvider {
         this.properties = properties;
 
         this.restClient = RestClient.builder()
-                .baseUrl(properties.baseUrl())
+                .baseUrl(properties.kakaopayBaseUrl())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 // 카카오페이 최신 API는 Secret Key를 기반으로 인증함
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "SECRET_KEY " + properties.secretKey())

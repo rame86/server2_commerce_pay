@@ -11,8 +11,5 @@ public record KakaoPayProperties(
         String approvalUrl,
         String cancelUrl,
         String failUrl,
-        String baseUrl,
-        String frontendWalletUrl,
-        String frontendRedirectUrl,
-        String paymentSuccessUrl) {
+        String kakaopayBaseUrl) {
 }

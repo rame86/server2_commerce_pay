@@ -55,8 +55,8 @@ public class TransactionHistory {
     @Column(name = "amount", nullable = false, precision = 15, scale = 2)
     private BigDecimal amount; // 실제 지갑 변동액 (+/-)
 
-    @Column(name = "original_amount", precision = 15, scale = 2)
-    private BigDecimal originalAmount; // 할인 전 원가
+    @Column(name = "original_price", precision = 15, scale = 2)
+    private BigDecimal originalAmount; // 상품 원가
 
     @Column(name = "fee", precision = 15, scale = 2)
     private BigDecimal fee; // 플랫폼 수수료 (정산 시 활용)
