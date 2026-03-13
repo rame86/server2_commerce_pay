@@ -1,4 +1,4 @@
-package com.example.payment.controller;
+package com.example.wallet.controller;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.payment.dto.response.WalletResponseDTO;
-import com.example.payment.service.wallet.WalletService;
+import com.example.wallet.dto.WalletDTO;
+import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,10 +44,10 @@ public class WalletController {
 
     // 관리자용
     @GetMapping("/getall") // 3. HTTP GET 요청을 이 메서드와 연결
-    public ResponseEntity<List<WalletResponseDTO>> getAllWallets() {
+    public ResponseEntity<List<WalletDTO>> getAllWallets() {
 
         // 서비스 계층에서 DB의 모든 지갑 정보를 가져옴
-        List<WalletResponseDTO> wallets = walletService.getAllWallets();
+        List<WalletDTO> wallets = walletService.getAllWallets();
 
         // 4. ResponseEntity를 사용하여 200 OK 상태 코드와 함께 데이터를 반환
         return ResponseEntity.ok(wallets);

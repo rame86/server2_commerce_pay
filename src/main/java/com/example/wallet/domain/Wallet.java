@@ -1,4 +1,4 @@
-package com.example.payment.domain;
+package com.example.wallet.domain;
 
 import java.math.BigDecimal;
 import java.util.UUID;

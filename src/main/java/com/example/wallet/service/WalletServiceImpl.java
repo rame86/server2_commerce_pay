@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/service/WalletServiceImpl.java
-package com.example.payment.service.wallet;
+package com.example.wallet.service;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -11,11 +11,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.domain.TransactionHistory;
-import com.example.payment.domain.Wallet;
 import com.example.payment.dto.event.PaymentEventDTO;
-import com.example.payment.dto.response.WalletResponseDTO;
 import com.example.payment.repository.TransactionHistoryRepository;
-import com.example.payment.repository.WalletRepository;
+import com.example.wallet.domain.Wallet;
+import com.example.wallet.dto.WalletDTO;
+import com.example.wallet.repository.WalletRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +31,7 @@ public class WalletServiceImpl implements WalletService {
 
     @Override
     @Transactional(readOnly = true) // 읽기 전용 트랜잭션으로 성능 최적화
-    public List<WalletResponseDTO> getAllWallets() {
+    public List<WalletDTO> getAllWallets() {
         return walletRepository.findAll().stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
@@ -160,8 +160,8 @@ public class WalletServiceImpl implements WalletService {
     }
 
     // DTO 변환 유틸리티
-    private WalletResponseDTO convertToResponseDTO(Wallet wallet) {
-        return WalletResponseDTO.builder()
+    private WalletDTO convertToResponseDTO(Wallet wallet) {
+        return WalletDTO.builder()
                 .walletId(wallet.getWalletId())
                 .memberId(wallet.getMemberId())
                 .balance(wallet.getBalance())
