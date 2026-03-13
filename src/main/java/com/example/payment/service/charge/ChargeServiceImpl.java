@@ -14,7 +14,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.domain.Charge;
 import com.example.payment.domain.TransactionHistory;
-import com.example.payment.domain.Wallet;
 import com.example.payment.dto.request.ChargeRequestDTO;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.dto.response.PaymentHistoryResponseDTO;
@@ -22,9 +21,10 @@ import com.example.payment.dto.response.TransactionDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
 import com.example.payment.repository.ChargeRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
-import com.example.payment.repository.WalletRepository;
 import com.example.payment.service.charge.provider.PaymentProvider;
-import com.example.payment.service.wallet.WalletService;
+import com.example.wallet.domain.Wallet;
+import com.example.wallet.repository.WalletRepository;
+import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
