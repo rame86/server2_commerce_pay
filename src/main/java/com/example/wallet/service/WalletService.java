@@ -1,16 +1,16 @@
 // src/main/java/com/example/payment/service/WalletService.java
-package com.example.payment.service.wallet;
+package com.example.wallet.service;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 import com.example.payment.dto.event.PaymentEventDTO;
-import com.example.payment.dto.response.WalletResponseDTO;
+import com.example.wallet.dto.WalletDTO;
 
 public interface WalletService {
 
     // 모든 지갑 정보 조회
-    List<WalletResponseDTO> getAllWallets();
+    List<WalletDTO> getAllWallets();
 
     // 회원 ID로 잔액 조회
     BigDecimal getBalance(Long memberId);

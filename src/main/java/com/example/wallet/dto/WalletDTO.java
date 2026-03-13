@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/dto/response/WalletResponseDTO.java
-package com.example.payment.dto.response;
+package com.example.wallet.dto;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -11,7 +11,7 @@ import lombok.Builder;
  * 지갑 정보 응답 DTO (Record + Builder)
  */
 @Builder
-public record WalletResponseDTO(
+public record WalletDTO(
     UUID walletId,
     Long memberId,
     BigDecimal balance,
