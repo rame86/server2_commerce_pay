@@ -25,6 +25,7 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     private final WalletService walletService;
     private final PaymentEventProducer producer;
     private final SettlementService settlementService;
+    private final SettlementEventService settlementEventService;
 
     @Lazy
     @Autowired
@@ -36,15 +37,18 @@ public class PaymentEventServiceImpl implements PaymentEventService {
      */
     @Override
     public void handleEvent(PaymentEventDTO dto) {
-        if(dto.getQuantity() == null){
+        if (dto.getQuantity() == null) {
             dto.setQuantity(1);
         }
         switch (dto.getType()) {
             case "PAYMENT" -> self.processPaymentEvent(dto);
             case "REFUND" -> self.processRefundEvent(dto);
             case "DONATION" -> self.processDonationEvent(dto);
-            case "SETTLEMENT" -> self.processSettlement(dto); 
+            // 어드민이 직접 실행하는 정산 (관리자 권한 로직 포함)
+            case "ADMIN_SETTLEMENT" -> settlementEventService.processAdminSettlement(dto);
 
+            // 아티스트가 신청하는 정산 (신청 데이터 검증 로직 포함)
+            case "ARTIST_SETTLEMENT_REQUEST" -> self.processArtistSettlementRequest(dto);
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
@@ -52,11 +56,11 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processPaymentEvent(PaymentEventDTO dto) {
-        if(dto.getFee() == null) {
+        if (dto.getFee() == null) {
             log.error("수수료 정보가 없습니다. 주문번호: {}", dto.getOrderId());
             return;
         }
-        
+
         log.info(">>> [PAYMENT] 결제 요청 수신 데이터: {}", dto);
 
         executeWithStatusUpdate(dto, "COMPLETE", "결제 성공", () -> {
@@ -86,23 +90,23 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processDonationEvent(PaymentEventDTO dto) {
-        
+
         dto.setFee(BigDecimal.valueOf(20));
         dto.setOriginalPrice(dto.getAmount());
 
         log.info(">>> [DONATION] 결제 요청 수신 데이터: {}", dto);
         executeWithStatusUpdate(dto, "COMPLETE", "후원 성공", () -> {
-             // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
+            // 1. 유저 지갑에서 금액 차감 및 결제 원장 기록
             walletService.processPayment(dto);
-             // 2. 아티스트 정산 데이터 기록 및 잔액 업데이트
+            // 2. 아티스트 정산 데이터 기록 및 잔액 업데이트
             settlementService.processSettlement(dto);
             return null;
         });
     }
 
+   
     @Override
-    public void processSettlement(PaymentEventDTO dto) {
-
+    public void processArtistSettlementRequest(PaymentEventDTO dto) {
     };
 
     /**
