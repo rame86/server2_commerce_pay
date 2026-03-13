@@ -1,4 +1,4 @@
-package com.example.payment.service;
+package com.example.payment.service.charge;
 
 import java.util.UUID;
 

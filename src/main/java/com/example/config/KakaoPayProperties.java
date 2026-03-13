@@ -11,5 +11,5 @@ public record KakaoPayProperties(
         String approvalUrl,
         String cancelUrl,
         String failUrl,
-        String kakaopayBaseUrl) {
+        String kakaoPayBaseUrl) {
 }

@@ -19,7 +19,7 @@ import com.example.config.KakaoPayProperties;
 import com.example.payment.dto.request.ChargeRequestDTO;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.dto.response.PaymentHistoryResponseDTO;
-import com.example.payment.service.ChargeService;
+import com.example.payment.service.charge.ChargeService;
 
 import lombok.RequiredArgsConstructor;
 

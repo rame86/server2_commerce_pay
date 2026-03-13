@@ -1,5 +1,5 @@
 //src/main/java/com/example/payment/service/ChargeServiceImpl.java
-package com.example.payment.service;
+package com.example.payment.service.charge;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -23,7 +23,8 @@ import com.example.payment.messaging.producer.PaymentEventProducer;
 import com.example.payment.repository.ChargeRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
 import com.example.payment.repository.WalletRepository;
-import com.example.payment.service.provider.PaymentProvider;
+import com.example.payment.service.charge.provider.PaymentProvider;
+import com.example.payment.service.wallet.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

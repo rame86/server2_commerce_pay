@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/service/SettlementServiceImpl.java
-package com.example.payment.service;
+package com.example.payment.service.settlement;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
