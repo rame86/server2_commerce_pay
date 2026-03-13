@@ -1,4 +1,4 @@
-package com.example.payment.service.provider;
+package com.example.payment.service.charge.provider;
 
 import com.example.payment.domain.Charge;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
@@ -9,7 +9,7 @@ public interface PaymentProvider {
     boolean supports(String pgProvider);
 
     // PG사별 결제 준비 API 호출 (payType 파라미터 제거하여 결합도 최소화)
-    ChargeReadyResponseDTO ready(Charge charge, Long memberId);
+    ChargeReadyResponseDTO ready(Charge charge, Long memberId, String token);
 
     // PG사별 결제 승인 API 호출
     void approve(Charge charge, String pgToken);
