@@ -1,36 +1,45 @@
 # src/main/resources/application-dev.yml
 spring:
   datasource:
-    # 환경 변수 없으면 지정된 IP의 DB로 붙어
-    url: jdbc:postgresql://34.158.208.117:5432/msa_pay_db?currentSchema=pay
+    url: jdbc:postgresql://34.50.7.72:5432/msa_pay_db?currentSchema=pay
     username: app_user
     password: user1234
-    driver-class-name: org.postgresql.Driver # 포스트그레 드라이버 사용
+    driver-class-name: org.postgresql.Driver
 
   rabbitmq:
-    host: localhost # 메시지 큐 호스트 설정
-    port: 5672 # 래빗MQ 기본 포트
-    username: msa_mq # 큐 접속 계정
-    password: mq1234 # 큐 접속 비번
+    host: localhost
+    port: 5672
+    username: msa_mq
+    password: mq1234
 
   jpa:
     hibernate:
-      ddl-auto: validate # 테이블은 건드리지 말고 구조만 검증해
-    show-sql: true # 실행되는 SQL 로그를 보여줘
+      ddl-auto: validate
+    show-sql: true
     properties:
       hibernate:
-        "[format_sql]": true # SQL 로그를 보기 좋게 정렬해
+        "[format_sql]": true
 
 mybatis:
-  mapper-locations: classpath:mappers/**/*.xml # 매퍼 XML 위치 지정
-  type-aliases-package: com.example.payment.dto # DTO 패키지 경로 별칭
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.example.payment.dto
 
 kakao:
   pay:
-    secret-key: dev_secret_key_here # 개발용 시크릿 키
-    cid: TC0ONETIME # 테스트용 가맹점 코드
-    # 로컬 Nginx Gateway 또는 직접 접속 주소
-    approval-url: http://localhost:8083/payment/success
-    cancel-url: http://localhost:8083/payment/cancel
-    fail-url: http://localhost:8083/payment/fail
-    base-url: https://open-api.kakaopay.com
+    secret-key: dev_secret_key_here
+    cid: TC0ONETIME
+    client-base-url: http://localhost/msa/pay 
+    
+    # 필드명 kakaoPayBaseUrl과 매핑되도록 수정
+    kakao-pay-base-url: https://open-api.kakaopay.com 
+    
+    approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
+    cancel-url: ${kakao.pay.client-base-url}/payment/cancel
+    fail-url: ${kakao.pay.client-base-url}/payment/fail
+
+payment:
+  url:
+    wallet: http://localhost/user/wallet
+    success: http://localhost/user/payment-success.html
+    fail: http://localhost/user/payment-fail.html
+    cancel: http://localhost/user/payment-cancel.html
