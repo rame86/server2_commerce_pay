@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/service/WalletService.java
-package com.example.payment.service;
+package com.example.payment.service.wallet;
 
 import java.math.BigDecimal;
 import java.util.List;

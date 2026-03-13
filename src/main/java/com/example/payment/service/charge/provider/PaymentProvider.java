@@ -1,4 +1,4 @@
-package com.example.payment.service.provider;
+package com.example.payment.service.charge.provider;
 
 import com.example.payment.domain.Charge;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;

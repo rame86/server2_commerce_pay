@@ -1,6 +1,6 @@
 // src/main/java/com/example/payment/service/provider/KakaoPayProvider.java
 
-package com.example.payment.service.provider;
+package com.example.payment.service.charge.provider;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,7 +25,7 @@ public class KakaoPayProvider implements PaymentProvider {
         this.properties = properties;
 
         this.restClient = RestClient.builder()
-                .baseUrl(properties.kakaopayBaseUrl())
+                .baseUrl(properties.kakaoPayBaseUrl())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 // 카카오페이 최신 API는 Secret Key를 기반으로 인증함
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "SECRET_KEY " + properties.secretKey())

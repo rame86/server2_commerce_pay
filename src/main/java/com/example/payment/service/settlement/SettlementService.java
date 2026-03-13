@@ -1,4 +1,4 @@
-package com.example.payment.service;
+package com.example.payment.service.settlement;
 
 import com.example.payment.dto.event.PaymentEventDTO;
 
