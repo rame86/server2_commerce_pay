@@ -28,12 +28,12 @@ kakao:
   pay:
     secret-key: dev_secret_key_here
     cid: TC0ONETIME
-    
-    # 애플리케이션 베이스 URL (Gateway 경유)
     client-base-url: http://localhost/msa/pay 
     
-    # 내부 API 가이드에 따른 엔드포인트 구성
-    kakao-base-url: https://open-api.kakaopay.com
+    # 수정 전: kakao-base-url: https://open-api.kakaopay.com
+    # 수정 후: 하이픈(-) 위치를 확인해줘 (kakao-pay-base-url)
+    kakao-pay-base-url: https://open-api.kakaopay.com
+    
     approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
     cancel-url: ${kakao.pay.client-base-url}/payment/cancel
     fail-url: ${kakao.pay.client-base-url}/payment/fail
