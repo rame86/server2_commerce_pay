@@ -1,0 +1,46 @@
+#payment src/main/resources/application-dev.yml
+spring:
+  datasource:
+    url: jdbc:postgresql://34.50.7.72:5432/msa_pay_db?currentSchema=pay
+    username: app_user
+    password: user1234
+    driver-class-name: org.postgresql.Driver
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: msa_mq
+    password: mq1234
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+
+mybatis:
+  mapper-locations: classpath:mappers/**/*.xml
+  type-aliases-package: com.example.payment.dto
+
+kakao:
+  pay:
+    secret-key: dev_secret_key_here
+    cid: TC0ONETIME
+    
+    # 애플리케이션 베이스 URL (Gateway 경유)
+    client-base-url: http://localhost/msa/pay 
+    
+    # 내부 API 가이드에 따른 엔드포인트 구성
+    kakao-base-url: https://open-api.kakaopay.com
+    approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
+    cancel-url: ${kakao.pay.client-base-url}/payment/cancel
+    fail-url: ${kakao.pay.client-base-url}/payment/fail
+
+payment:
+  url:
+    wallet: http://localhost/user/wallet
+    success: http://localhost/user/payment-success.html
+    fail: http://localhost/user/payment-fail.html
+    cancel: http://localhost/user/payment-cancel.html
