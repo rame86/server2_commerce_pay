@@ -21,7 +21,9 @@ public class PaymentEventDTO {
      * - 후원: orderId, memberId, artistId, amount, type, eventTitle, replyRoutingKey
      * * 2. 환불 (REFUND)
      * - 공통: orderId, memberId, artistId, amount, type, replyRoutingKey
-     * * 3. 정산 조회 (SETTLEMENT)
+     * * 3. 관리자 정산 조회 (ADMIN_SETTLEMENT)
+     * - type, replyRoutingKey
+     * 
      * - 공통: artistId, type, replyRoutingKey
      * ========================================== */
 

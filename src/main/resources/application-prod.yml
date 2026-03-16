@@ -1,4 +1,4 @@
-# src/main/resources/application-prod.yml
+#payment src/main/resources/application-prod.yml
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}

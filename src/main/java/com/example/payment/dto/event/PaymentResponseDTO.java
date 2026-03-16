@@ -1,5 +1,5 @@
 // src/main/java/com/example/payment/dto/response/PaymentResponseDTO.java
-package com.example.payment.dto.response;
+package com.example.payment.dto.event;
 
 /**
  * 결제 응답 데이터 객체 (Record 활용)
