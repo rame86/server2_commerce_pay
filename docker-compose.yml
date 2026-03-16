@@ -1,0 +1,31 @@
+# payment-service/ docker-compose.yml
+services:
+  payment-service:
+    # Docker Hub 이미지 경로
+    image: ssrabw/msa-payment:latest
+    container_name: payment-service
+    
+    # 호스트 8083 포트를 컨테이너 8083 포트로 매핑
+    ports:
+      - "8083:8083"
+    
+    # 중요: .env 파일의 환경 변수를 컨테이너 내부 OS 환경 변수로 주입
+    env_file:
+      - .env
+    
+    environment:
+      # 프로필을 prod로 강제 지정하거나 .env의 설정을 따름
+      - SPRING_PROFILES_ACTIVE=prod
+      - TZ=Asia/Seoul
+    
+    # CI/CD에서 생성/확인하는 네트워크 사용
+    networks:
+      - msa-network
+    
+    # 컨테이너 비정상 종료 시 자동 재시작
+    restart: always
+
+networks:
+  msa-network:
+    # 이미 생성된 외부 네트워크를 사용하도록 설정
+    external: true
