@@ -1,4 +1,4 @@
-# src/main/resources/application.yml
+#payment src/main/resources/application.yml
 spring:
   application:
     name: payment-service # 서비스 이름 설정
