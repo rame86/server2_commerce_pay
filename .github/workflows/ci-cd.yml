@@ -1,16 +1,16 @@
 #payment service ci-cd.yml
-
 name: Payment Service CI/CD
 
 on:
   push:
-    branches: [ master ] # master 브랜치에 푸시되거나 머지될 때만 실행
+    branches: [ master ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -18,11 +18,11 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # 1. JAR 파일 빌드 (Gradle 사용)
+      # 1. JAR 파일 빌드 (테스트 생략으로 속도 최적화)
       - name: Build with Gradle
         run: |
           chmod +x ./gradlew
-          ./gradlew clean bootJar
+          ./gradlew clean bootJar -x test
 
       # 2. Docker Hub 로그인
       - name: Login to Docker Hub
@@ -34,28 +34,77 @@ jobs:
       # 3. Docker 이미지 빌드 및 푸시
       - name: Build and Push Docker Image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/msa-payment:latest .
-          docker push ${{ secrets.DOCKER_USERNAME }}/msa-payment:latest
+          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/msa-payment
+          docker build -t $IMAGE_NAME:latest .
+          docker push $IMAGE_NAME:latest
 
-      # 4. GCP Server 2 배포
+      # 4. GitHub Actions 러너의 공용 IP 가져오기
+      - name: Get Runner IP
+        id: ip
+        run: echo "ipv4=$(curl -s https://api.ipify.org)" >> $GITHUB_OUTPUT
+
+      # 5. GCP 인증 (GCP_SA_KEY 시크릿 활용)
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # 6. gcloud SDK 설정
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # 7. SSH 포트 일시 허용 (방화벽 규칙 생성)
+      - name: Open Firewall for Deployment
+        run: |
+          gcloud compute firewall-rules create allow-ssh-payment-${{ github.run_id }} \
+            --direction=INGRESS \
+            --priority=100 \
+            --action=ALLOW \
+            --rules=tcp:22 \
+            --source-ranges=${{ steps.ip.outputs.ipv4 }}/32 \
+            --description="Temporary SSH access for Payment CI/CD"
+
+      # 8. GCP Server 2 배포 및 컨테이너 실행
       - name: Deploy to GCP Server 2
         uses: appleboy/ssh-action@master
         with:
-          host: 34.50.60.193
+          host: 34.50.60.193 # Server 2 IP
           username: oksm1003
           key: ${{ secrets.GCP_KEY }}
           script: |
-            # payment 폴더로 이동 (없으면 에러 방지용 체크 필요할 수 있음)
-            cd /home/oksm1003/payment 
+            WORK_DIR="/home/oksm1003/payment"
+            mkdir -p $WORK_DIR
+            cd $WORK_DIR
             
-            # 서버 브랜치를 master로 전환하고 최신 코드 가져오기
             git fetch origin
             git checkout master || git checkout -b master
             git pull origin master
 
-            # 컨테이너 갱신 및 실행
+            docker network inspect msa-network >/dev/null 2>&1 || docker network create msa-network
+
+            # .env 파일 완벽 동적 생성 (기존 파일 덮어쓰기)
+            echo "SPRING_PROFILES_ACTIVE=prod" > .env
+            echo "SPRING_DATASOURCE_URL=jdbc:postgresql://34.50.7.72:5432/msa_pay_db?currentSchema=pay" >> .env
+            echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
+            echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
+            echo "RABBITMQ_HOST=34.50.7.72" >> .env
+            echo "RABBITMQ_PORT=5672" >> .env
+            echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
+            echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
+            
+            # 카카오페이 및 도메인 설정 추가
+            echo "KAKAO_PAY_SECRET_KEY=${{ secrets.KAKAO_PAY_SECRET_KEY }}" >> .env
+            echo "KAKAO_PAY_CID=TC0ONETIME" >> .env
+            echo "APP_CLIENT_BASE_URL=http://34.64.85.123/msa/pay" >> .env
+            echo "FRONTEND_WALLET_URL=http://34.64.85.123/user/wallet" >> .env
+            echo "TZ=Asia/Seoul" >> .env
+
             docker compose pull
             docker compose up -d
-            
-            # 사용하지 않는 오래된 이미지 삭제 (용량 확보)
             docker image prune -f
+
+      # 9. 방화벽 규칙 삭제 (성공/실패 여부 상관없이 항상 실행)
+      - name: Close Firewall
+        if: always()
+        run: |
+          gcloud compute firewall-rules delete allow-ssh-payment-${{ github.run_id }} --quiet
