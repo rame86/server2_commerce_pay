@@ -46,9 +46,10 @@ public class PaymentEventServiceImpl implements PaymentEventService {
             case "DONATION" -> self.processDonationEvent(dto);
             // 어드민이 직접 실행하는 정산 (관리자 권한 로직 포함)
             case "ADMIN_SETTLEMENT" -> settlementEventService.processAdminSettlement(dto);
-
             // 아티스트가 신청하는 정산 (신청 데이터 검증 로직 포함)
             case "ARTIST_SETTLEMENT_REQUEST" -> self.processArtistSettlementRequest(dto);
+            // 승인된 아티스트 알람(계좌생성)
+            case "ARTIST_APPROVE" -> self.processArtistWalletCreate(dto);
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
@@ -133,6 +134,14 @@ public class PaymentEventServiceImpl implements PaymentEventService {
         } catch (Exception e) {
             handleEventError(dto, e.getMessage(), e);
         }
+    }
+
+    // 새 아티스트!!!!!!!
+    @Override
+    @Transactional
+    public void processArtistWalletCreate(PaymentEventDTO dto) {
+        log.info(">>> [ARTIST_APPROVE] 요청 정보 MemberID: {}, Name: {}",
+            dto.getMemberId(), dto.getArtistName());
     }
 
     private void handleEventError(PaymentEventDTO dto, String errorMsg, Exception e) {
