@@ -88,10 +88,13 @@ jobs:
             echo "SPRING_DATASOURCE_URL=jdbc:postgresql://34.50.7.72:5432/msa_pay_db?currentSchema=pay" >> .env
             echo "POSTGRES_USER=${{ secrets.POSTGRES_USER }}" >> .env
             echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
-            echo "RABBITMQ_HOST=34.50.7.72" >> .env
-            echo "RABBITMQ_PORT=5672" >> .env
+            echo "RABBITMQ_HOST=${{ secrets.GCP_SERVER_1 }}" >> .env
+            echo "RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}" >> .env
             echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
-            echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
+            echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env            
+            echo "REDIS_HOST=${{ secrets.GCP_SERVER_1 }}" >> .env
+            echo "REDIS_PORT=${{ secrets.REDIS_PORT }}" >> .env
+
             
             # 카카오페이 및 도메인 설정 추가
             echo "KAKAO_PAY_SECRET_KEY=${{ secrets.KAKAO_PAY_SECRET_KEY }}" >> .env
