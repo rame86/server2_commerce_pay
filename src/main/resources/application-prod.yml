@@ -1,4 +1,4 @@
-#payment src/main/resources/application-prod.yml
+# payment src/main/resources/application-prod.yml
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL}
@@ -23,18 +23,19 @@ mybatis:
 
 kakao:
   pay:
-    # 운영 환경에서는 시크릿 키를 소스코드에 하드코딩하지 않고 환경변수로 주입
-    secret-key: ${KAKAO_PAY_SECRET_KEY:dev_secret_key_here} 
+    secret-key: ${KAKAO_PAY_SECRET_KEY} 
     cid: TC0ONETIME
     
-    # 운영 환경 베이스 URL 변수 선언 (환경변수 주입 가능함~)
+    # 운영 서버 베이스 URL (게이트웨이 주소 포함)
     client-base-url: ${APP_CLIENT_BASE_URL:http://34.64.85.123/msa/pay}
     
-    # 선언한 변수를 참조하여 URL 구성
-    approval-url: ${kakao.pay.client-base-url}/payment/success
+    # dev 환경과 동일한 경로 구조로 수정
+    approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
     cancel-url: ${kakao.pay.client-base-url}/payment/cancel
     fail-url: ${kakao.pay.client-base-url}/payment/fail    
-    kakaopay-base-url: https://open-api.kakaopay.com
+    
+    # Java의 kakaoPayBaseUrl 필드와 매핑되도록 하이픈(-) 추가
+    kakao-pay-base-url: https://open-api.kakaopay.com
 
 payment:
   url:

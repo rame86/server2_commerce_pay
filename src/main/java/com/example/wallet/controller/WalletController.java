@@ -5,11 +5,17 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.payment.domain.ArtistAccount;
+import com.example.payment.dto.response.UserPaymentSummaryDTO;
+import com.example.payment.service.settlement.SettlementService;
 import com.example.wallet.dto.WalletDTO;
 import com.example.wallet.service.WalletService;
 
@@ -23,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 public class WalletController {
 
     private final WalletService walletService;
+    private final SettlementService settlementService;
 
     @GetMapping("/")
     public String getWallet(
@@ -42,7 +49,7 @@ public class WalletController {
         return ResponseEntity.ok(balance);
     }
 
-    // 관리자용
+    // 관리자용1
     @GetMapping("/getall") // 3. HTTP GET 요청을 이 메서드와 연결
     public ResponseEntity<List<WalletDTO>> getAllWallets() {
 
@@ -53,4 +60,19 @@ public class WalletController {
         return ResponseEntity.ok(wallets);
     }
 
+    // 관리자용2
+    @GetMapping("/artist/{artistId}")
+    public ResponseEntity<ArtistAccount> getArtistWallets(@PathVariable("artistId") Long artistId) {
+        log.info("아티스트 {}번의 정산 정보 조회 요청 수신", artistId);
+        return ResponseEntity.ok(settlementService.getArtistAccount(artistId));
+    }
+
+    // 관리자용3
+    @PostMapping("/user/summary")
+    public ResponseEntity<List<UserPaymentSummaryDTO>> getUserPaymentSummaries(@RequestBody List<Long> memberId) {
+        log.info("관리자용 유저 결제 요약 정보 요청 수신: {}명", memberId.size());
+        List<UserPaymentSummaryDTO> summary = settlementService.getUserPaymentSummary(memberId);
+        return ResponseEntity.ok(summary);
+    }
+    
 }

@@ -11,6 +11,6 @@ public interface PaymentEventService {
     void processPaymentEvent(PaymentEventDTO dto);
     void processRefundEvent(PaymentEventDTO dto);
     void processDonationEvent(PaymentEventDTO dto);
-    
     void processArtistSettlementRequest(PaymentEventDTO dto);
+    void processArtistWalletCreate(PaymentEventDTO dto);
 }
