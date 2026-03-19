@@ -16,5 +16,7 @@ public interface TransactionHistoryRepository extends JpaRepository<TransactionH
 
     // 지갑 ID 기반으로 최신순 거래 내역 조회
     List<TransactionHistory> findAllByWalletIdOrderByCreatedAtDesc(UUID walletId);
+    
+    int countByWalletIdAndTransactionType(UUID walletId, String type);
 
 }
