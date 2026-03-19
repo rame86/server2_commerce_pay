@@ -36,7 +36,7 @@ kakao:
 
 payment:
   url:
-    wallet: http://localhost/user/wallet
-    success: http://localhost/user/payment-success.html
-    fail: http://localhost/user/payment-fail.html
-    cancel: http://localhost/user/payment-cancel.html
+    wallet: http://localhost/wallet
+    success: http://localhost/payment-success.html
+    fail: http://localhost/payment-fail.html
+    cancel: http://localhost/payment-cancel.html

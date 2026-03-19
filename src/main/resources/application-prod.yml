@@ -44,7 +44,7 @@ kakao:
 
 payment:
   url:
-    wallet: ${FRONTEND_WALLET_URL:http://34.64.85.123/user/wallet}
-    success: ${FRONTEND_SUCCESS_URL:http://34.64.85.123/user/payment-success.html}
-    fail: ${FRONTEND_FAIL_URL:http://34.64.85.123/user/payment-fail.html}
-    cancel: ${FRONTEND_CANCEL_URL:http://34.64.85.123/user/payment-cancel.html}
+    wallet: ${FRONTEND_WALLET_URL:http://34.64.85.123/wallet}
+    success: ${FRONTEND_SUCCESS_URL:http://34.64.85.123/payment-success.html}
+    fail: ${FRONTEND_FAIL_URL:http://34.64.85.123/payment-fail.html}
+    cancel: ${FRONTEND_CANCEL_URL:http://34.64.85.123/payment-cancel.html}
