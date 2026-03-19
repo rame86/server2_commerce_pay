@@ -11,12 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
+import com.example.payment.domain.TransactionHistory;
 import com.example.payment.dto.event.PaymentEventDTO;
+import com.example.payment.dto.response.PointHistoryDTO;
+import com.example.payment.dto.response.PurchaseHistoryDTO;
 import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
 import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.repository.ArtistAccountRepository;
 import com.example.payment.repository.LedgerRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
+import com.example.wallet.domain.Wallet;
 import com.example.wallet.repository.WalletRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -135,6 +139,43 @@ public class SettlementServiceImpl implements SettlementService {
 
     @Override
     public UserDetailPaymentResponseDTO getUserPaymentDetail(Long memberId){
-        return null;
+        log.info("유저 ID {}의 상세 결제/포인트 내역 수색 중... 🔍", memberId);
+
+        // 지갑 조회
+        Wallet wallet = walletRepository.findByMemberId(memberId)
+            .orElseThrow(() -> new RuntimeException("해당 유저의 지갑을 찾을 수 없습니다."));
+        
+        // 모든 트랜잭션 히스토리 최신순으로 가져오기
+        List<TransactionHistory> allHistories = transactionHistoryRepository
+            .findAllByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());
+        
+        // PAYMENT이력만 담아오기
+        List<PurchaseHistoryDTO> purchaseHistory = allHistories.stream()
+            .filter(h -> "PAYMENT".equals(h.getTransactionType()))
+            .map(h -> PurchaseHistoryDTO.builder()
+                .purchasedAt(h.getCreatedAt().toString())
+                .itemName(h.getDescription())
+                .amount(h.getAmount().longValue())
+                .quantity(h.getQuantity())
+                .status(h.getTransactionType())
+                .build()).toList();
+        
+        // 포인트 내역 담아오기
+        List<PointHistoryDTO> pointHistory = allHistories.stream()
+            .map(h -> PointHistoryDTO.builder()
+                .processedAt(h.getCreatedAt().toString())
+                .type(h.getTransactionType())
+                .amount(h.getAmount().longValue())
+                .description(h.getDescription())
+                .balanceAfter(h.getBalanceAfter().longValue())
+                .build()).toList();
+
+        return UserDetailPaymentResponseDTO.builder()
+            .totalPurchases(purchaseHistory.size())
+            .pointBalance(wallet.getBalance().longValue())
+            .purchaseHistory(purchaseHistory)
+            .pointHistory(pointHistory)
+            .build();
     }
+
 }
