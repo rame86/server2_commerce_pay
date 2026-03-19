@@ -11,5 +11,6 @@ public interface SettlementService {
     public void processSettlement(PaymentEventDTO dto);
     public ArtistAccount getArtistAccount(Long artistId);
     public List<UserPaymentSummaryDTO> getUserPaymentSummary(List<Long> memberId);
-    public UserDetailPaymentResponseDTO getUserPaymentDetail(Long memberId);
+    public UserDetailPaymentResponseDTO getUserPaymentDetail(Long memberId)
+    ;
 }
