@@ -1,11 +1,9 @@
 // src/main/java/com/example/payment/service/SettlementServiceImpl.java
 package com.example.payment.service.settlement;
 
-import com.example.wallet.repository.WalletRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -14,10 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
 import com.example.payment.dto.event.PaymentEventDTO;
+import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
 import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.repository.ArtistAccountRepository;
 import com.example.payment.repository.LedgerRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
+import com.example.wallet.repository.WalletRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -131,5 +131,10 @@ public class SettlementServiceImpl implements SettlementService {
                         .build();
                 }).orElse(new UserPaymentSummaryDTO(mid, 0, 0L, 0));
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public UserDetailPaymentResponseDTO getUserPaymentDetail(Long memberId){
+        return null;
     }
 }
