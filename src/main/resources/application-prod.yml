@@ -7,7 +7,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   rabbitmq:
-    host: ${RABBITMQ_HOST}
+    host: ${GCP_SERVER_1}
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USER}
     password: ${RABBITMQ_PASSWORD}
@@ -19,7 +19,7 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST}
+      host: ${GCP_SERVER_1}
       port: ${REDIS_PORT}
 
 mybatis:
