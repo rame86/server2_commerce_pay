@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.domain.ArtistAccount;
+import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
 import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.service.settlement.SettlementService;
 import com.example.wallet.dto.WalletDTO;
@@ -74,5 +75,13 @@ public class WalletController {
         List<UserPaymentSummaryDTO> summary = settlementService.getUserPaymentSummary(memberId);
         return ResponseEntity.ok(summary);
     }
+
+    // 관리자용4
+    @PostMapping("/user/detail")
+    public UserDetailPaymentResponseDTO getUserPaymentDetail(@RequestBody Long memberId) {
+        log.info("관리자가 유저 ID {}의 상세 내역을 수색하러 왔습니다! 🔍", memberId);
+        return settlementService.getUserPaymentDetail(memberId);
+    }
+    
     
 }
