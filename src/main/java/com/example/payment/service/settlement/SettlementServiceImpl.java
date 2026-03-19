@@ -3,6 +3,8 @@ package com.example.payment.service.settlement;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,8 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
 import com.example.payment.dto.event.PaymentEventDTO;
+import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
+import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.repository.ArtistAccountRepository;
 import com.example.payment.repository.LedgerRepository;
+import com.example.payment.repository.TransactionHistoryRepository;
+import com.example.wallet.repository.WalletRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,8 +27,10 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class SettlementServiceImpl implements SettlementService {
 
+    private final WalletRepository walletRepository;
     private final LedgerRepository ledgerRepository;
     private final ArtistAccountRepository artistAccountRepository;
+    private final TransactionHistoryRepository transactionHistoryRepository;
 
     @Override
     @Transactional
@@ -87,5 +95,46 @@ public class SettlementServiceImpl implements SettlementService {
 
         // 6. 아티스트 계좌 총 누적액 및 출금 가능 잔액 업데이트
         account.addBalances(netAmount);
+    }
+
+    // 해당 아티스트의 총누적금액, 잔액 조회
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistAccount getArtistAccount(Long artistId) {
+        // 아티스트 계좌가 있으면 가져오고, 없으면 0원짜리 새 객체라도 보여주기!
+        return artistAccountRepository.findById(artistId)
+            .orElseGet(() -> ArtistAccount.builder()
+                .artistId(artistId)
+                .totalBalance(BigDecimal.ZERO)
+                .withdrawableBalance(BigDecimal.ZERO)
+                .build());
+    }
+
+    // 유저들의 총 구매횟수, 잔액
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserPaymentSummaryDTO> getUserPaymentSummary(List<Long> memberId) {
+        log.info("유저 {}명의 결제 및 잔액 요약 정보 수색 시작! ㅡㅡ🚔", memberId.size());
+
+        return memberId.stream().map(mid -> {
+            return walletRepository.findByMemberId(mid)
+                .map(wallet -> {
+                    int count = transactionHistoryRepository.countByWalletIdAndTransactionType(
+                        wallet.getWalletId(), "PAYMENT"
+                    );
+
+                    return UserPaymentSummaryDTO.builder()
+                        .memberId(mid)
+                        .purchaseCount(count)
+                        .balance(wallet.getBalance().longValue())
+                        .version(wallet.getVersion())
+                        .build();
+                }).orElse(new UserPaymentSummaryDTO(mid, 0, 0L, 0));
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public UserDetailPaymentResponseDTO getUserPaymentDetail(Long memberId){
+        return null;
     }
 }

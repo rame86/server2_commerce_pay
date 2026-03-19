@@ -23,6 +23,8 @@ public class PaymentEventDTO {
      * - 공통: orderId, memberId, artistId, amount, type, replyRoutingKey
      * * 3. 관리자 정산 조회 (ADMIN_SETTLEMENT)
      * - type, replyRoutingKey
+     * * 4. 아티스트 승인 후 계좌생성 (ARTIST_APPROVE)
+     * - type, memberId, artistName
      * 
      * - 공통: artistId, type, replyRoutingKey
      * ========================================== */
@@ -43,5 +45,6 @@ public class PaymentEventDTO {
     // === [메타 데이터] ===
     private Long artistId;           // 후원 대상 아티스트 또는 정산 대상 ID
     private String eventTitle;       // 거래 내역에 기록될 상세 내용 (공연명, 상품명 등)
+    private String artistName;       // 아티스트 이름
 }
 
