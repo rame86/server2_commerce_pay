@@ -7,7 +7,7 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   rabbitmq:
-    host: ${RABBITMQ_HOST}
+    host: ${GCP_SERVER_1}
     port: ${RABBITMQ_PORT}
     username: ${RABBITMQ_USER}
     password: ${RABBITMQ_PASSWORD}
@@ -16,6 +16,11 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: false
+
+  data:
+    redis:
+      host: ${GCP_SERVER_1}
+      port: ${REDIS_PORT}
 
 mybatis:
   mapper-locations: classpath:mappers/**/*.xml
@@ -31,8 +36,8 @@ kakao:
     
     # dev 환경과 동일한 경로 구조로 수정
     approval-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/success
-    cancel-url: ${kakao.pay.client-base-url}/payment/cancel
-    fail-url: ${kakao.pay.client-base-url}/payment/fail    
+    cancel-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/cancel
+    fail-url: ${kakao.pay.client-base-url}/payment/charge/kakaopay/fail    
     
     # Java의 kakaoPayBaseUrl 필드와 매핑되도록 하이픈(-) 추가
     kakao-pay-base-url: https://open-api.kakaopay.com
