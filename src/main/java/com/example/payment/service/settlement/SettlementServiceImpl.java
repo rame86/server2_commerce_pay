@@ -3,6 +3,7 @@ package com.example.payment.service.settlement;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -142,9 +143,17 @@ public class SettlementServiceImpl implements SettlementService {
         log.info("유저 ID {}의 상세 결제/포인트 내역 수색 중... 🔍", memberId);
 
         // 지갑 조회
-        Wallet wallet = walletRepository.findByMemberId(memberId)
-            .orElseThrow(() -> new RuntimeException("해당 유저의 지갑을 찾을 수 없습니다."));
+        Wallet wallet = walletRepository.findByMemberId(memberId).orElse(null);
         
+        if (wallet == null) {
+        return UserDetailPaymentResponseDTO.builder()
+                .totalPurchases(0)
+                .pointBalance(0L)
+                .purchaseHistory(Collections.emptyList())
+                .pointHistory(Collections.emptyList())
+                .build();
+    }
+
         // 모든 트랜잭션 히스토리 최신순으로 가져오기
         List<TransactionHistory> allHistories = transactionHistoryRepository
             .findAllByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());

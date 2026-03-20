@@ -2,6 +2,7 @@
 package com.example.payment.dto.event;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -46,5 +47,9 @@ public class PaymentEventDTO {
     private Long artistId;           // 후원 대상 아티스트 또는 정산 대상 ID
     private String eventTitle;       // 거래 내역에 기록될 상세 내용 (공연명, 상품명 등)
     private String artistName;       // 아티스트 이름
+
+    // === [관리자용 데이터] ===
+    private List<Long> allMemberId;        // 리스트에 담긴 회원들의 정보를 요청할때 사용
+    private List<Long> allArtistId;        // 리스트에 담긴 아티스트들의 정보를 요청할때 사용
 }
 
