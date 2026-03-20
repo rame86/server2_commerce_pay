@@ -22,8 +22,8 @@ public class PaymentEventDTO {
      * - 후원: orderId, memberId, artistId, amount, type, eventTitle, replyRoutingKey
      * * 2. 환불 (REFUND)
      * - 공통: orderId, memberId, artistId, amount, type, replyRoutingKey
-     * * 3. 관리자 정산 조회 (ADMIN_SETTLEMENT)
-     * - type, replyRoutingKey
+     * * 3. 관리자 정산 조회 (ADMIN)
+     * - type(요청타입=ADMIN), orderId(요청기능=GETALL, ARTIST, SUMMARY, USER_DETAIL) replyRoutingKey
      * * 4. 아티스트 승인 후 계좌생성 (ARTIST_APPROVE)
      * - type, memberId, artistName
      * 
