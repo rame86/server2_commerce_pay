@@ -22,7 +22,7 @@ public class PaymentEventListener {
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentEventDTO dto) {
-        log.info("[MQ 수신] 타입: {}, 주문번호: {}", dto.getType(), dto.getOrderId());
+        log.info("[MQ 수신] 타입: {}, 주문번호: {}, 답장 목적지: {}", dto.getType(), dto.getOrderId(), dto.getReplyRoutingKey());
 
         if (dto.getQuantity() == null) {
             dto.setQuantity(1);
