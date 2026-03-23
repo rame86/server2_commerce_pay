@@ -1,4 +1,4 @@
-package com.example.payment.service.settlement;
+package com.example.settlement.service;
 
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.dto.event.PaymentEventDTO;
