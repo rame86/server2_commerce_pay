@@ -55,16 +55,17 @@ public class ArtistSettlementServiceImpl implements ArtistSettlementService {
         // 2. 전체 원장 조회 (최신순)
         List<Ledger> allLedgers = artistLedgerRepository.findAllByArtistIdOrderByCreatedAtDesc(artistId);
 
-        // 3. 이번달 수익
+        // 3. 이번달 수익 (범위 검색 조건 적용)
         LocalDate now = LocalDate.now();
+        OffsetDateTime startOfThisMonth = now.withDayOfMonth(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+        OffsetDateTime startOfNextMonth = startOfThisMonth.plusMonths(1);
+
         BigDecimal thisMonthRevenue = artistLedgerRepository.sumThisMonthNetAmount(
-                artistId, now.getYear(), now.getMonthValue());
+                artistId, startOfThisMonth, startOfNextMonth);
 
         // 4. 정산 완료 / 정산 예정 분리
         //    - 이번달 이전 COMPLETED: 정산 완료 (이미 지급)
         //    - 이번달 포함 이후 COMPLETED: 정산 예정
-        OffsetDateTime startOfThisMonth = now.withDayOfMonth(1).atStartOfDay().atOffset(ZoneOffset.UTC);
-
         BigDecimal completedSettlement = allLedgers.stream()
                 .filter(l -> "COMPLETED".equals(l.getStatus())
                         && l.getCreatedAt() != null
