@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
-import com.example.payment.service.settlement.SettlementService;
+import com.example.settlement.service.SettlementService;
 import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
