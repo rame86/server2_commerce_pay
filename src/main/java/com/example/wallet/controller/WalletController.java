@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.payment.service.settlement.SettlementService;
+import com.example.settlement.service.SettlementService;
 import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;

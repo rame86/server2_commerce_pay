@@ -26,7 +26,7 @@ import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
 import com.example.payment.repository.LedgerRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
-import com.example.payment.service.settlement.SettlementService;
+import com.example.settlement.service.SettlementService;
 import com.example.wallet.domain.Wallet;
 import com.example.wallet.dto.WalletDTO;
 import com.example.wallet.repository.WalletRepository;
