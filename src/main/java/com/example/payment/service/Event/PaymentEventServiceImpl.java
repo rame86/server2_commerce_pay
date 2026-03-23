@@ -3,7 +3,10 @@ package com.example.payment.service.Event;
 
 import java.math.BigDecimal;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.dto.event.PaymentEventDTO;
@@ -23,10 +26,16 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     private final PaymentEventProducer producer;
     private final SettlementService settlementService;
 
-    // 기존에 있던 SettlementEventService 의존성 및 Lazy 처리 제거됨 (결합도 완화)
+    @Lazy
+    @Autowired
+    private PaymentEventServiceImpl self; // 트랜잭션 전파를 위한 자기 참조
+
+    // ──────────────────────────────────────────────────
+    // @Transactional 제거: MQ 발송이 트랜잭션 밖에서 실행되야 함.
+    // 비즈니스 로직은 executeBusinessLogic(REQUIRES_NEW)에서 별도 트랜잭션으로 격리.
+    // ──────────────────────────────────────────────────
 
     @Override
-    @Transactional
     public void processPaymentEvent(PaymentEventDTO dto) {
         if (dto.getFee() == null) {
             log.error("수수료 정보가 없습니다. 주문번호: {}", dto.getOrderId());
@@ -42,7 +51,6 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     }
 
     @Override
-    @Transactional
     public void processRefundEvent(PaymentEventDTO dto) {
         log.info(">>> [REFUNDED] 결제 요청 수신 데이터: {}", dto);
 
@@ -54,7 +62,6 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     }
 
     @Override
-    @Transactional
     public void processDonationEvent(PaymentEventDTO dto) {
         dto.setFee(BigDecimal.valueOf(20));
         dto.setOriginalPrice(dto.getAmount());
@@ -75,13 +82,13 @@ public class PaymentEventServiceImpl implements PaymentEventService {
     @Override
     @Transactional
     public void processArtistWalletCreate(PaymentEventDTO dto) {
-        // 이건 굳이 답장(Reply) 안 보내도 되는 단순 알림 이벤트의 좋은 예시
         log.info(">>> [ARTIST_APPROVE] 요청 정보 MemberID: {}, Name: {}", dto.getMemberId(), dto.getArtistName());
     }
 
     /**
      * [이벤트 처리 공통 템플릿]
-     * PROCESSING 발송 로직은 제거해도 좋다면 제거하는 것을 추천해.
+     * 비즈니스 로직은 REQUIRES_NEW 트랜잭션으로 격리 실행.
+     * MQ 발송(성공/실패)은 트랜잭션 바깥에서 실행되므로 UnexpectedRollbackException 방지.
      */
     private void executeWithStatusUpdate(PaymentEventDTO dto, String successStatus, String successMsg,
             java.util.concurrent.Callable<Void> businessLogic) {
@@ -90,19 +97,27 @@ public class PaymentEventServiceImpl implements PaymentEventService {
         String type = dto.getType();
 
         try {
-            // 주석 처리. 굳이 PROCESSING을 보낼 필요가 없다면 지움.
-            // producer.sendDataResponse(replyKey, orderId, "PROCESSING", "처리 중입니다.", type,
-            // null);
+            // 비즈니스 로직을 별도 트랜잭션(REQUIRES_NEW)으로 실행
+            // 예외 발생 시 이 트랜잭션만 롤백되고, 아래 catch는 트랜잭션 바깥에서 실행됨
+            self.executeBusinessLogic(businessLogic);
 
-            businessLogic.call();
-
-            // 코어 서버가 응답을 기다리므로 성공/실패 여부는 보내야 함
+            // 성공 응답 발송 (트랜잭션 커밋 완료 후 실행)
             producer.sendDataResponse(replyKey, orderId, successStatus, successMsg, type, null);
             log.info("[{}] 처리 완료 - 주문번호: {}", type, orderId);
 
         } catch (Exception e) {
+            // 트랜잭션은 이미 롤백됨. 여기서 MQ 발송은 트랜잭션 외부이므로 안전.
             log.error("[{}] 처리 실패 - 주문번호: {}, 사유: {}", dto.getType(), dto.getOrderId(), e.getMessage());
             producer.sendDataResponse(replyKey, orderId, "FAIL", e.getMessage(), "ERROR", null);
         }
+    }
+
+    /**
+     * 비즈니스 로직 전용 트랜잭션 (REQUIRES_NEW).
+     * 예외 발생 시 이 트랜잭션만 롤백되고, 호출자(executeWithStatusUpdate)의 catch로 예외가 전달됨.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void executeBusinessLogic(java.util.concurrent.Callable<Void> logic) throws Exception {
+        logic.call();
     }
 }
