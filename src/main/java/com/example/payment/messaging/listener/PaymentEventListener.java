@@ -42,6 +42,9 @@ public class PaymentEventListener {
             case "ARTIST_SETTLEMENT_REQUEST" -> paymentService.processArtistSettlementRequest(dto);
             case "ARTIST_APPROVE" -> paymentService.processArtistWalletCreate(dto);
             
+            // 유저 대시보드 데이터 조회
+            case "USER_DASHBOARD" -> settlementEventService.processAdminUserDetail(dto);
+            
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
