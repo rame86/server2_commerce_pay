@@ -33,18 +33,15 @@ public class PaymentEventListener {
             case "PAYMENT" -> paymentService.processPaymentEvent(dto);
             case "REFUND" -> paymentService.processRefundEvent(dto);
             case "DONATION" -> paymentService.processDonationEvent(dto);
-            
+
             // 관리자 조회 관련 라우팅
             case "ADMIN" -> handleAdminRequest(dto);
             case "ADMIN_SETTLEMENT" -> settlementEventService.processAdminSettlement(dto);
-            
+
             // 아티스트 관련 라우팅
             case "ARTIST_SETTLEMENT_REQUEST" -> paymentService.processArtistSettlementRequest(dto);
             case "ARTIST_APPROVE" -> paymentService.processArtistWalletCreate(dto);
-            
-            // 유저 대시보드 데이터 조회
-            case "USER_DASHBOARD" -> settlementEventService.processAdminUserDetail(dto);
-            
+
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
