@@ -38,11 +38,21 @@ public class WalletServiceImpl implements WalletService {
     }
 
     @Override
+    @Transactional
     public BigDecimal getBalance(Long memberId) {
-        // 지갑 정보가 없으면 잔액 0원 반환 (보안 및 실행 가능성 고려)
+        // 지갑 정보가 없으면 지갑 자동 생성 후 잔액 0원 반환
         return walletRepository.findByMemberId(memberId)
                 .map(Wallet::getBalance)
-                .orElse(BigDecimal.ZERO);
+                .orElseGet(() -> {
+                    log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
+                    Wallet newWallet = Wallet.builder()
+                            .memberId(memberId)
+                            .balance(BigDecimal.ZERO)
+                            .status("ACTIVE")
+                            .build();
+                    walletRepository.save(newWallet);
+                    return BigDecimal.ZERO;
+                });
     }
 
     @Override
