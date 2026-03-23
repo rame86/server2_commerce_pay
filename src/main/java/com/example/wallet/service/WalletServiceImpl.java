@@ -37,12 +37,9 @@ public class WalletServiceImpl implements WalletService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional
-    public BigDecimal getBalance(Long memberId) {
-        // 지갑 정보가 없으면 지갑 자동 생성 후 잔액 0원 반환
+    // 자체 지갑 조회 로직 (없으면 자동 생성)
+    private Wallet getOrCreateWallet(Long memberId) {
         return walletRepository.findByMemberId(memberId)
-                .map(Wallet::getBalance)
                 .orElseGet(() -> {
                     log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
                     Wallet newWallet = Wallet.builder()
@@ -50,17 +47,22 @@ public class WalletServiceImpl implements WalletService {
                             .balance(BigDecimal.ZERO)
                             .status("ACTIVE")
                             .build();
-                    walletRepository.save(newWallet);
-                    return BigDecimal.ZERO;
+                    return walletRepository.save(newWallet);
                 });
     }
 
     @Override
     @Transactional
+    public BigDecimal getBalance(Long memberId) {
+        // 지갑 정보가 없으면 지갑 자동 생성 후 잔액 반환
+        return getOrCreateWallet(memberId).getBalance();
+    }
+
+    @Override
+    @Transactional
     public void processPayment(PaymentEventDTO dto) {
-        // 지갑찾기
-        Wallet wallet = walletRepository.findByMemberId(dto.getMemberId())
-                .orElseThrow(() -> new IllegalStateException("지갑이 없습니다."));
+        // 지갑찾기 및 없으면 자동 생성
+        Wallet wallet = getOrCreateWallet(dto.getMemberId());
 
         // 활성화된 지갑인지 확인
         if (!"ACTIVE".equals(wallet.getStatus())) {
