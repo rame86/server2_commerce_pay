@@ -17,6 +17,10 @@ public class PaymentEventDTO {
 
     /*
      * ==========================================
+     * 요청 익스체인지 네임 ="msa.direct.exchange"
+     * 요청 큐네임 = "pay.request.queue"
+     * 반드시 답변 받을 주소를 payload.replyRoutingKey 에 넣어서 보내줄것
+     * ==========================================
      * [이벤트 타입별 필수 Payload 규격]
      * * 1. 결제 (PAYMENT)
      * - 공연/상품: orderId, memberId, artistId, amount, originalAmount, quantity, fee,

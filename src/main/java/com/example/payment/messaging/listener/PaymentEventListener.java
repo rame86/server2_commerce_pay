@@ -22,7 +22,7 @@ public class PaymentEventListener {
 
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentEventDTO dto) {
-        log.info("[MQ 수신] 타입: {}, 주문번호: {}", dto.getType(), dto.getOrderId());
+        log.info("[MQ 수신] 타입: {}, 주문번호: {}, 답장 목적지: {}", dto.getType(), dto.getOrderId(), dto.getReplyRoutingKey());
 
         if (dto.getQuantity() == null) {
             dto.setQuantity(1);
@@ -33,15 +33,15 @@ public class PaymentEventListener {
             case "PAYMENT" -> paymentService.processPaymentEvent(dto);
             case "REFUND" -> paymentService.processRefundEvent(dto);
             case "DONATION" -> paymentService.processDonationEvent(dto);
-            
+
             // 관리자 조회 관련 라우팅
             case "ADMIN" -> handleAdminRequest(dto);
             case "ADMIN_SETTLEMENT" -> settlementEventService.processAdminSettlement(dto);
-            
+
             // 아티스트 관련 라우팅
             case "ARTIST_SETTLEMENT_REQUEST" -> paymentService.processArtistSettlementRequest(dto);
             case "ARTIST_APPROVE" -> paymentService.processArtistWalletCreate(dto);
-            
+
             default -> log.error("알 수 없는 메시지 타입: {}", dto.getType());
         }
     }
