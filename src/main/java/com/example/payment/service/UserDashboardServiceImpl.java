@@ -29,13 +29,15 @@ public class UserDashboardServiceImpl implements UserDashboardService {
     private final TransactionHistoryRepository transactionHistoryRepository;
 
     @Override
-    public UserDetailPaymentResponseDTO getUserDashboardDetail(Long memberId) {
+    public UserDetailPaymentResponseDTO getUserDashboardDetail(String memberId) {
+        Long id = Long.parseLong(memberId);
+        
         // 1. 지갑 조회
-        Wallet wallet = walletRepository.findByMemberId(memberId).orElse(null);
+        Wallet wallet = walletRepository.findByMemberId(id).orElse(null);
 
         // 2. 지갑이 없는 경우 예외 처리 (Early Return 패턴)
         if (wallet == null) {
-            log.warn("[UserDashboard] 유저 ID {}의 지갑 정보 없음 - 빈 데이터 반환", memberId);
+            log.warn("[UserDashboard] 유저 ID {}의 지갑 정보 없음 - 빈 데이터 반환", id);
             return createEmptyResponse();
         }
 
