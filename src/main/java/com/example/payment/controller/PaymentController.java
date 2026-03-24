@@ -1,6 +1,7 @@
 //src/main/java/com/example/payment/controller/PaymentController.java
 package com.example.payment.controller;
 
+
 import java.net.URI;
 import java.util.UUID;
 
@@ -19,10 +20,14 @@ import com.example.config.KakaoPayProperties;
 import com.example.payment.dto.request.ChargeRequestDTO;
 import com.example.payment.dto.response.ChargeReadyResponseDTO;
 import com.example.payment.dto.response.PaymentHistoryResponseDTO;
+import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
+import com.example.payment.service.UserDashboardService;
 import com.example.payment.service.charge.ChargeService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @RequestMapping("/payment")
 @RestController
 @RequiredArgsConstructor
@@ -36,6 +41,7 @@ public class PaymentController {
     private final ChargeService chargeService;
     private final KakaoPayProperties kakaoPayProperties;
     private final FrontendUrlProperties frontendUrl;
+    private final UserDashboardService userDashboardService;
 
     /**
      * [결제 내역 및 지갑 정보 조회]
@@ -101,5 +107,13 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl.cancel()))
                 .build();
+    }
+
+        @GetMapping("/user-detail/{memberId}")
+    public ResponseEntity<UserDetailPaymentResponseDTO> getUserDetail() {
+            
+        log.info("[UserDashboard] 유저 ID {} 대시보드 데이터 REST 조회 요청", USER_ID_HEADER);
+        UserDetailPaymentResponseDTO response = userDashboardService.getUserDashboardDetail(USER_ID_HEADER);
+        return ResponseEntity.ok(response);
     }
 }
