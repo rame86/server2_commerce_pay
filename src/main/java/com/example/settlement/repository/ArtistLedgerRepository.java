@@ -14,7 +14,7 @@ import com.example.payment.domain.Ledger;
 
 /**
  * Settlement 도메인 전용 레포지토리.
- * payment.domain.Ledger 엔티티를 직접 참조하여 새 쿼리를 추가합니다.
+ * payment.domain.Ledger 엔티티를 직접 참조하여 새 쿼리를 추가
  * (기존 payment 도메인의 LedgerRepository와 충돌 없이 별도로 운용)
  */
 @Repository
@@ -37,17 +37,20 @@ public interface ArtistLedgerRepository extends JpaRepository<Ledger, UUID> {
             """)
     List<Object[]> sumNetAmountByRevenueType(@Param("artistId") Long artistId);
 
-    /** 특정 아티스트의 이번달 수익 합계 */
+    /** 
+     * 특정 아티스트의 이번달 수익 합계 
+     * 성능 및 DB 호환성을 위해 DB 내장 함수 대신 기간(Range) 조건 사용
+     */
     @Query("""
             SELECT COALESCE(SUM(l.netAmount), 0)
             FROM Ledger l
             WHERE l.artistId = :artistId
               AND l.netAmount > 0
-              AND FUNCTION('YEAR', l.createdAt)  = :year
-              AND FUNCTION('MONTH', l.createdAt) = :month
+              AND l.createdAt >= :startDateTime
+              AND l.createdAt < :endDateTime
             """)
     java.math.BigDecimal sumThisMonthNetAmount(
             @Param("artistId") Long artistId,
-            @Param("year") int year,
-            @Param("month") int month);
+            @Param("startDateTime") OffsetDateTime startDateTime,
+            @Param("endDateTime") OffsetDateTime endDateTime);
 }
