@@ -4,5 +4,5 @@ package com.example.payment.service;
 import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
 
 public interface UserDashboardService {
-    UserDetailPaymentResponseDTO getUserDashboardDetail(String memberId);
+    UserDetailPaymentResponseDTO getUserDashboardDetail(Long memberId);
 }

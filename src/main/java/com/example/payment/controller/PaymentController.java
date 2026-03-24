@@ -1,13 +1,13 @@
 //src/main/java/com/example/payment/controller/PaymentController.java
 package com.example.payment.controller;
 
-
 import java.net.URI;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -110,10 +110,11 @@ public class PaymentController {
     }
 
         @GetMapping("/user-detail/{memberId}")
-    public ResponseEntity<UserDetailPaymentResponseDTO> getUserDetail() {
+    public ResponseEntity<UserDetailPaymentResponseDTO> getUserDetail(
+            @PathVariable(name = "memberId") Long memberId) {
             
-        log.info("[UserDashboard] 유저 ID {} 대시보드 데이터 REST 조회 요청", USER_ID_HEADER);
-        UserDetailPaymentResponseDTO response = userDashboardService.getUserDashboardDetail(USER_ID_HEADER);
+        log.info("[UserDashboard] 유저 ID {} 대시보드 데이터 REST 조회 요청", memberId);
+        UserDetailPaymentResponseDTO response = userDashboardService.getUserDashboardDetail(memberId);
         return ResponseEntity.ok(response);
     }
 }
