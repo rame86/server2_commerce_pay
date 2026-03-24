@@ -9,12 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.payment.domain.ArtistAccount;
-import com.example.settlement.service.SettlementService;
-import com.example.wallet.dto.ArtistAccountResponse;
 import com.example.wallet.service.WalletService;
-
-import org.springframework.web.bind.annotation.PathVariable;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WalletController {
 
     private final WalletService walletService;
-    private final SettlementService settlementService;
 
     @GetMapping("/")
     public String getWallet(
@@ -46,17 +40,4 @@ public class WalletController {
         return ResponseEntity.ok(balance);
     }
 
-    // 관리자 서비스에서 아티스트 상세 조회 시 호출하는 엔드포인트 복구
-    @GetMapping("/artist/{artistId}")
-    public ResponseEntity<ArtistAccountResponse> getArtistAccount(@PathVariable("artistId") Long artistId) {
-        log.info("[WALLET] 아티스트 계좌 정보 조회 요청 - artistId: {}", artistId);
-        ArtistAccount account = settlementService.getArtistAccount(artistId);
-
-        ArtistAccountResponse response = ArtistAccountResponse.builder()
-                .totalBalance(account.getTotalBalance())
-                .withdrawableBalance(account.getWithdrawableBalance())
-                .build();
-
-        return ResponseEntity.ok(response);
-    }
 }
