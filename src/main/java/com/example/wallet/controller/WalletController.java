@@ -34,7 +34,7 @@ public class WalletController {
             @RequestHeader("x-role") String role,
             @RequestHeader("x-user-name") String name) {
 
-        String response = ("WalletController/wallet/ : " + userId + " " + role +" "+name+ "님의 /wallet/ 요청받음");
+        String response = ("WalletController/wallet/ : " + userId + " " + role + " " + name + "님의 /wallet/ 요청받음");
         return response;
     }
 
@@ -51,12 +51,12 @@ public class WalletController {
     public ResponseEntity<ArtistAccountResponse> getArtistAccount(@PathVariable("artistId") Long artistId) {
         log.info("[WALLET] 아티스트 계좌 정보 조회 요청 - artistId: {}", artistId);
         ArtistAccount account = settlementService.getArtistAccount(artistId);
-        
+
         ArtistAccountResponse response = ArtistAccountResponse.builder()
                 .totalBalance(account.getTotalBalance())
                 .withdrawableBalance(account.getWithdrawableBalance())
                 .build();
-                
+
         return ResponseEntity.ok(response);
     }
 }
