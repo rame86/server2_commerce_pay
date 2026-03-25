@@ -10,9 +10,8 @@ Integer version;       // 데이터 버전 (낙관적 락용
  */
 
 @Builder
-public record UserPaymentSummaryDTO(Long memberId,
+public record UserPaymentSummaryDTO(
+        Long memberId,
         Integer purchaseCount,
         Long balance,
-        Integer version) {
-
-}
+        Integer version) {}

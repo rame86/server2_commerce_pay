@@ -173,6 +173,8 @@ public class WalletServiceImpl implements WalletService {
 
     // DTO 변환 유틸리티
     private WalletDTO convertToResponseDTO(Wallet wallet) {
+        long count = transactionRepository.countByWalletIdAndTransactionType(
+            wallet.getWalletId(), "PAYMENT");
         return WalletDTO.builder()
                 .walletId(wallet.getWalletId())
                 .memberId(wallet.getMemberId())
