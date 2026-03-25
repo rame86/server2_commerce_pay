@@ -31,13 +31,13 @@ public class PaymentEventProducer {
         
         try {
             // [추가] 발송 직전 Payload 상세 데이터 로깅
-            log.info("발송 예정 페이로드 상세 데이터 - 주문번호: {}, 데이터: {}", orderId, payload);
+            log.info("발송 예정 페이로드 상세 데이터 - OrderID: {}, 데이터: {}", orderId, payload);
 
             // targetRoutingKey에 따라 Shop 또는 Res 큐로 동적 발송됨
             rabbitTemplate.convertAndSend(EXCHANGE_NAME, targetRoutingKey, responseDTO);
-            log.info("상태 업데이트 발송 완료 - 목적지: {}, 주문번호: {}, 상태: {}", targetRoutingKey, orderId, status);
+            log.info("상태 업데이트 발송 완료 - 목적지: {}, OrderID: {}, 상태: {}", targetRoutingKey, orderId, status);
         } catch (AmqpException e) {
-            log.error("메시지 발송 실패 - 주문번호: {}, 에러: {}", orderId, e.getMessage());
+            log.error("메시지 발송 실패 - OrderID: {}, 에러: {}", orderId, e.getMessage());
         }
     }
 }
