@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.settlement.service.SettlementService;
 import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 public class WalletController {
 
     private final WalletService walletService;
-    private final SettlementService settlementService;
 
     @GetMapping("/")
     public String getWallet(
@@ -30,7 +28,7 @@ public class WalletController {
             @RequestHeader("x-role") String role,
             @RequestHeader("x-user-name") String name) {
 
-        String response = ("WalletController/wallet/ : " + userId + " " + role +" "+name+ "님의 /wallet/ 요청받음");
+        String response = ("WalletController/wallet/ : " + userId + " " + role + " " + name + "님의 /wallet/ 요청받음");
         return response;
     }
 
@@ -40,5 +38,6 @@ public class WalletController {
         // [Self-Review] memberId 유효성 검증 로직 추가 가능
         BigDecimal balance = walletService.getBalance(memberId);
         return ResponseEntity.ok(balance);
-    }    
+    }
+
 }
