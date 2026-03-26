@@ -20,10 +20,8 @@ import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
 import com.example.payment.repository.ArtistAccountRepository;
 import com.example.settlement.dto.ArtistDonationResponse;
-import com.example.settlement.dto.ArtistSettlementResponseDTO;
 import com.example.settlement.dto.ArtistDonationResponse.DailyTrendDTO;
-import com.example.settlement.dto.ArtistDonationResponse.DonationMessageDTO;
-import com.example.settlement.dto.ArtistDonationResponse.DonorDTO;
+import com.example.settlement.dto.ArtistSettlementResponseDTO;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.MonthlyRevenueSummary;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.RevenueComposition;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.SettlementSummary;
@@ -264,7 +262,7 @@ public class ArtistSettlementServiceImpl implements ArtistSettlementService {
     @Override
     @Transactional(readOnly = true)
     public ArtistDonationResponse artistDonation(Long artistId) {
-        log.info("[DONATION] 아티스트 후원 내역 조회 - artistId: {}", artistId);
+        log.info(">>> [DONATION] 아티스트 후원 내역 조회 - artistId: {}", artistId);
 
         // 1. 후원 데이터 전체 조회 (최신순)
         // 레포지토리에 findByArtistIdAndStatusAndRevenueTypeOrderByCreatedAtDesc 필요
@@ -311,12 +309,12 @@ public class ArtistSettlementServiceImpl implements ArtistSettlementService {
                 .collect(Collectors.toMap(
                         l -> (String)(l.getEventTitle() != null ? l.getEventTitle() : "익명의 팬"), 
                         Ledger::getGrossAmount,
-                        BigDecimal::add // 🌟 3개만 쓰면 충분해!
+                        BigDecimal::add
                 ));
 
         // 6. 응원 메시지 목록
         List<ArtistDonationResponse.DonationMessageDTO> messages = donationLedgers.stream()
-                .map(l -> new ArtistDonationResponse.DonationMessageDTO( // 🌟 내부 클래스 경로 명시
+                .map(l -> new ArtistDonationResponse.DonationMessageDTO(
                         l.getEventTitle() != null ? l.getEventTitle() : "익명의 팬", 
                         l.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
                         l.getGrossAmount().longValue(),
@@ -327,7 +325,7 @@ public class ArtistSettlementServiceImpl implements ArtistSettlementService {
 
         // 7. 리스트 변환 및 정렬
         List<ArtistDonationResponse.DonorDTO> topDonors = donorMap.entrySet().stream()
-                .map(entry -> new ArtistDonationResponse.DonorDTO( // 🌟 여기도 경로 명시!
+                .map(entry -> new ArtistDonationResponse.DonorDTO(
                         entry.getKey(), 
                         entry.getValue().longValue()
                 ))
