@@ -19,6 +19,7 @@ public interface ArtistSettlementService {
      * @return 요약 카드, 월별 추이, 수익 비중, 상세 내역이 포함된 통합 응답 객체
      */
     ArtistSettlementResponseDTO getSettlementDashboard(Long artistId);
+    
     // [아티스트 후원 내역 조회] 수민 수정
     ArtistDonationResponse artistDonation(Long artistId);
 }
