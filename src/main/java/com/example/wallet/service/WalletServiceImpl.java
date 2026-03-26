@@ -97,13 +97,14 @@ public class WalletServiceImpl implements WalletService {
         BigDecimal newBalance = wallet.getBalance();
 
         // 3. 거래 이력(원장) 저장
+        String paymentDesc = "결제 - " + (dto.getEventTitle() != null ? dto.getEventTitle() : "상품 결제");
         recordTransaction(
                 wallet.getWalletId(),
                 dto.getType(),
                 dto.getAmount().negate(), // 차감액이므로 음수 기록
                 newBalance,
                 dto.getOrderId(),
-                dto.getEventTitle() != null ? dto.getEventTitle() : "상품 결제 차감",
+                paymentDesc,
                 dto.getOriginalPrice(),
                 dto.getFee(),
                 dto.getShippingFee(),
@@ -144,13 +145,21 @@ public class WalletServiceImpl implements WalletService {
         BigDecimal newBalance = wallet.getBalance();
 
         // 4. 환불 이력 저장
+        // 원본 결제 내역의 description에서 "결제 - " 접두사를 제거 후 "환불 - " 접두사로 대체
+        String originalDesc = paymentTx.getDescription() != null ? paymentTx.getDescription() : "결제 취소";
+        String refundDesc;
+        if (originalDesc.startsWith("결제 - ")) {
+            refundDesc = "환불 - " + originalDesc.substring("결제 - ".length());
+        } else {
+            refundDesc = "환불 - " + originalDesc;
+        }
         recordTransaction(
                 wallet.getWalletId(),
                 dto.getType(),
                 refundAmount,
                 newBalance,
                 dto.getOrderId(),
-                dto.getEventTitle() != null ? dto.getEventTitle() : "결제 취소 환불",
+                refundDesc,
                 dto.getOriginalPrice(),
                 dto.getFee(),
                 dto.getShippingFee(),
