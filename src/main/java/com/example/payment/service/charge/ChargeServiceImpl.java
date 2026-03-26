@@ -36,25 +36,34 @@ public class ChargeServiceImpl implements ChargeService {
 
     private final ChargeRepository chargeRepository;
     private final WalletRepository walletRepository;
-    private final List<PaymentProvider> paymentProviders;
+    
+    // 전략 패턴(Strategy Pattern) 활용: 지원하는 모든 PG사 구현체를 리스트로 주입받음
+    private final List<PaymentProvider> paymentProviders; 
+    
     private final WalletService walletService;
     private final PaymentEventProducer producer;
     private final TransactionHistoryRepository transactionHistoryRepository;
 
+    /**
+     * Spring AOP 프록시 내부 호출(Self-Invocation) 문제 해결을 위한 자기 참조 주입.
+     * approvePayment(일반 메서드) 안에서 @Transactional(REQUIRES_NEW)가 붙은 
+     * processApprovalSuccess/Fail을 호출할 때 트랜잭션이 정상 작동하도록 @Lazy로 지연 주입받음.
+     */
     @Lazy
     @Autowired
-    private ChargeServiceImpl self; // 트랜잭션 전파(Propagation) 처리를 위한 자기 참조
+    private ChargeServiceImpl self; 
 
     /**
      * [결제 충전 준비]
-     * PG사 결제 요청 전, 지갑 상태를 검증하고 충전 원장(Charge)을 생성함
+     * PG사 결제창을 띄우기 전, 내부 시스템에 결제 원장을 '대기(PENDING)' 상태로 생성하고
+     * PG사로부터 결제 고유 번호(TID)를 발급받는 단계입니다.
      */
     @Override
     @Transactional
     public ChargeReadyResponseDTO readyPayment(Long memberId, ChargeRequestDTO request, String token) {
-        log.info("[READY_PAYMENT] 요청 수신 - memberId: {}, amount: {}", memberId, request.getAmount());
+        log.info(">>> [READY_PAYMENT] 요청 수신 - memberId: {}, amount: {}", memberId, request.getAmount());
 
-        // 1. 사용자 지갑 조회 및 유효성 검증
+        // 1. 사용자 지갑 조회 및 유효성 검증 (지갑이 없거나 비활성 상태면 예외 처리)
         Wallet wallet = walletRepository.findByMemberId(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("지갑이 존재하지 않습니다."));
 
@@ -62,14 +71,16 @@ public class ChargeServiceImpl implements ChargeService {
             throw new IllegalArgumentException("유효하지 않은 지갑 상태입니다.");
         }
 
-        // 2. 입력된 PG사 정보 표준화 및 전략(Provider) 선택
+        // 2. PG사 프로바이더 라우팅
+        // 입력받은 결제 수단을 표준화한 후, 해당 PG사를 처리할 수 있는 Provider 구현체를 찾음
         String mappedPgProvider = resolvePgProvider(request.getPayType());
         PaymentProvider selectedProvider = paymentProviders.stream()
                 .filter(provider -> provider.supports(mappedPgProvider))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 결제 수단: " + mappedPgProvider));
 
-        // 3. 결제 대기(PENDING) 상태의 원장 생성 및 저장
+        // 3. 결제 대기(PENDING) 상태의 내부 원장(Charge) 생성
+        // 아직 결제가 완료된 것이 아니므로 상태를 PENDING으로 설정
         Charge charge = Charge.builder()
                 .chargeId(UUID.randomUUID())
                 .walletId(wallet.getWalletId())
@@ -82,28 +93,32 @@ public class ChargeServiceImpl implements ChargeService {
         chargeRepository.save(charge);
 
         try {
-            // 4. PG사 외부 API 호출하여 결제 준비 완료 (TID 발급 등)
+            // 4. PG사 외부 API 호출하여 결제 준비 완료 (PG사 측 TID 발급)
             ChargeReadyResponseDTO responseDTO = selectedProvider.ready(charge, memberId, token);
+            
+            // 발급받은 외부 PG사의 TID를 내부 원장에 매핑하여 업데이트
             charge.updateTid(responseDTO.providerTid());
             chargeRepository.save(charge);
 
             return responseDTO;
         } catch (Exception e) {
-            charge.fail(e.getMessage()); // 실패 시 원장 상태 변경
-            log.error("[READY_PAYMENT] 실패 - chargeId: {}", charge.getChargeId(), e);
+            // PG사 통신 실패 등 오류 발생 시 원장 상태를 실패(FAIL)로 즉시 변경
+            charge.fail(e.getMessage()); 
+            log.error(">>> [READY_PAYMENT] 실패 - chargeId: {}", charge.getChargeId(), e);
             throw new RuntimeException("결제 준비 실패: " + e.getMessage());
         }
     }
 
     /**
      * [결제 승인 처리]
-     * 사용자가 결제 인증을 마친 후, PG사에 실제 승인 확정 요청을 보냄
+     * 사용자가 PG사 결제창에서 인증을 마친 후 리다이렉트 되었을 때,
+     * 실제 금액 출금을 위해 PG사에 '최종 승인'을 요청하는 단계입니다.
      */
     @Override
     public void approvePayment(UUID chargeId, String pgToken, String memberId) {
-        log.info("[APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);
+        log.info(">>> [APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);
 
-        // 1. 대기 중인 원장 확인
+        // 1. 내부 원장 무결성 검증 (해당 결제건이 존재하는지, 상태가 PENDING인지 확인)
         Charge charge = chargeRepository.findById(chargeId)
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 결제건입니다."));
 
@@ -111,83 +126,86 @@ public class ChargeServiceImpl implements ChargeService {
             throw new IllegalArgumentException("이미 처리된 결제건입니다.");
         }
 
-        // 2. 해당 PG사 Provider 선택
+        // 2. 원장에 기록된 PG사에 맞는 Provider 다시 선택
         PaymentProvider selectedProvider = paymentProviders.stream()
                 .filter(provider -> provider.supports(charge.getPgProvider()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("지원하지 않는 PG사: " + charge.getPgProvider()));
 
         try {
-            // 3. PG사 외부 API 호출 (실제 결제 확정)
+            // 3. PG사 외부 API 호출하여 최종 결제 승인(확정) 처리
+            // 이 시점에 실제 고객의 계좌/카드에서 돈이 빠져나감
             selectedProvider.approve(charge, pgToken);
 
-            // 4. 내부 DB 반영 (별도 트랜잭션 호출)
+            // 4. 내부 DB 반영
+            // 자기 참조(self)를 사용하여 REQUIRES_NEW 트랜잭션을 정상적으로 발생시킴
             self.processApprovalSuccess(chargeId, memberId);
         } catch (Exception e) {
-            // 실패 시 별도 트랜잭션으로 실패 상태 기록
+            // 결제 승인 실패 시 실패 상태를 별도 트랜잭션으로 확실하게 DB에 기록
             self.processApprovalFail(chargeId, e.getMessage());
-            log.error("[APPROVE_PAYMENT] 실패 - chargeId: {}", chargeId, e);
+            log.error(">>> [APPROVE_PAYMENT] 실패 - chargeId: {}", chargeId, e);
             throw new RuntimeException("결제 승인 실패: " + e.getMessage());
         }
     }
 
     /**
      * [결제 성공 후속 처리]
-     * 원장 상태를 성공으로 바꾸고, 지갑 잔액을 실제로 충전하며 거래 내역을 남김
+     * REQUIRES_NEW: 호출한 쪽(approvePayment)에 트랜잭션이 없더라도 무조건 새로운 트랜잭션을 생성.
+     * PG사 결제는 성공했는데 내부 DB 반영 중 에러가 나더라도 상태 일관성을 관리하기 위한 분리.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processApprovalSuccess(UUID chargeId, String memberId) {
-        // 1. 원장 성공 상태 변경
+        // 1. 원장 상태를 '성공(SUCCESS)'으로 변경
         Charge charge = chargeRepository.findById(chargeId)
                 .orElseThrow(() -> new IllegalArgumentException("원장 조회 실패"));
         charge.success();
 
-        // 2. 지갑 잔액 가산
+        // 2. 실제 사용자 지갑에 결제된 금액만큼 잔액 추가
         Wallet wallet = walletRepository.findById(charge.getWalletId())
                 .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
         wallet.addBalance(charge.getAmount());
 
-        // 3. 거래 내역(History) 기록
+        // 3. 거래 내역(History) 스냅샷 기록 (이후 감사 및 내역 조회용)
         TransactionHistory txHistory = TransactionHistory.builder()
                 .walletId(wallet.getWalletId())
                 .transactionType("CHARGE")
                 .amount(charge.getAmount())
-                .balanceAfter(wallet.getBalance())
+                .balanceAfter(wallet.getBalance()) // 금액 추가 후의 최종 잔액 기록
                 .referenceId(chargeId.toString())
                 .description(charge.getPgProvider() + " 충전")
                 .build();
         transactionHistoryRepository.save(txHistory);
 
-        // 4. Redis 잔액 동기화
+        // 4. Redis 캐시 데이터 동기화 (빠른 잔액 조회를 위해 RDB와 상태를 맞춤)
         BigDecimal balance = walletService.getBalance(Long.valueOf(memberId));
         walletService.updateRedisBalance(Long.valueOf(memberId), balance);
 
-        log.info("[APPROVE_PAYMENT] 원장 및 잔액 반영 완료");
+        log.info(">>> [APPROVE_PAYMENT] 원장 및 잔액 반영 완료");
     }
 
     /**
      * [결제 실패 후속 처리]
-     * 승인 과정에서 오류가 발생한 경우 원장에 실패 사유를 기록함
+     * REQUIRES_NEW: 메인 로직에서 예외가 발생해 롤백되더라도, 실패 이력 자체는 무조건 DB에 남기기 위함.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processApprovalFail(UUID chargeId, String errorMessage) {
         chargeRepository.findById(chargeId).ifPresent(charge -> {
-            charge.fail(errorMessage);
+            charge.fail(errorMessage); // 원장 상태를 FAIL로 변경하고 사유 기록
         });
     }
 
     /**
      * [결제 내역 조회]
-     * 지갑 잔액 및 포인트 증감 내역 반환. 지갑이 없으면 신규 생성.
+     * 사용자의 현재 지갑 잔액과 과거 거래 내역을 모두 반환합니다.
      */
     @Override
-    @Transactional // 지갑 생성이 발생할 수 있으므로 트랜잭션 처리
+    @Transactional 
     public PaymentHistoryResponseDTO getPaymentHistory(Long memberId) {
 
-        // 1. 지갑 조회, 없으면 즉시 생성 (초기 잔액 0, 상태 ACTIVE)
+        // 1. 지갑 조회. 회원의 지갑이 아직 없다면 초기 잔액 0원인 지갑을 즉시 생성 (Lazy Init)
         Wallet wallet = walletRepository.findByMemberId(memberId)
                 .orElseGet(() -> {
-                    log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
+                    log.info(">>> [WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
                     Wallet newWallet = Wallet.builder()
                             .memberId(memberId)
                             .balance(BigDecimal.ZERO)
@@ -196,11 +214,11 @@ public class ChargeServiceImpl implements ChargeService {
                     return walletRepository.save(newWallet);
                 });
 
-        // 2. 거래 내역 최신순 조회
+        // 2. 해당 지갑의 거래 내역을 최신순(내림차순)으로 모두 조회
         List<TransactionHistory> histories = transactionHistoryRepository
                 .findAllByWalletIdOrderByCreatedAtDesc(wallet.getWalletId());
 
-        // 3. Entity -> DTO 변환
+        // 3. Entity 객체를 외부 노출용 DTO로 변환 (엔티티 직접 노출 방지)
         List<TransactionDTO> transactionDTOs = histories.stream()
                 .map(history -> TransactionDTO.builder()
                         .transactionType(history.getTransactionType())
@@ -211,7 +229,7 @@ public class ChargeServiceImpl implements ChargeService {
                         .build())
                 .toList();
 
-        // 4. 최종 결과 조립
+        // 4. 현재 잔액과 거래 내역 리스트를 묶어서 반환
         return PaymentHistoryResponseDTO.builder()
                 .currentBalance(wallet.getBalance())
                 .transactions(transactionDTOs)
@@ -220,12 +238,15 @@ public class ChargeServiceImpl implements ChargeService {
 
     /**
      * [PG 제공자 분석]
-     * 입력받은 payType을 대문자로 정규화하여 지원하는 수단인지 확인 (White-list 기반)
+     * 클라이언트로부터 전달받은 payType 문자열을 대문자로 정규화하고, 
+     * 화이트리스트(White-list) 방식으로 검증하여 올바른 PG사 코드를 반환.
      */
     private String resolvePgProvider(String payType) {
         if (payType == null || payType.isBlank()) {
             throw new IllegalArgumentException("결제 수단(payType)이 누락되었습니다.");
         }
+        
+        // Java 14+ Enhanced Switch 구문 사용
         return switch (payType.toUpperCase()) {
             case "KAKAO_PAY" -> "KAKAO_PAY";
             case "NAVER_PAY" -> "NAVER_PAY";
