@@ -17,12 +17,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * [정산 원장 엔티티]
  * 거래별 매출액, 수수료, 최종 정산액을 기록하는 상세 명세서임.
  * 결제 서비스와 분리된 'settlement' 스키마에서 관리됨.
  */
+@Slf4j
 @Entity
 @Getter
 @Table(name = "ledgers", schema = "settlement")
@@ -32,7 +34,7 @@ public class Ledger {
     /** 정산 항목 고유 식별자 (UUID 자동 생성) */
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "ledger_id", updatable = false, nullable = false)
+    @Column(name = "ledger_id", updatable = false, nullable = false, columnDefinition = "BINARY(16)")
     private UUID ledgerId;
 
     /** 정산금을 수령할 아티스트 ID */
@@ -50,15 +52,15 @@ public class Ledger {
     private String revenueType;
 
     /** 총 매출액 (상품의 판매 원가) */
-    @Column(name = "gross_amount", nullable = false)
+    @Column(name = "gross_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal grossAmount;
 
     /** 플랫폼 수수료 금액 (플랫폼이 취하는 이득) */
-    @Column(name = "fee_amount", nullable = false)
+    @Column(name = "fee_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal feeAmount;
 
     /** 아티스트 실제 정산액 (Gross - Fee 결과값) */
-    @Column(name = "net_amount", nullable = false)
+    @Column(name = "net_amount", nullable = false, precision = 19, scale = 2)
     private BigDecimal netAmount;
 
     /** 정산 상태 (COMPLETED: 완료, REFUNDED: 환불됨) */
@@ -81,6 +83,9 @@ public class Ledger {
     @Builder
     public Ledger(Long artistId, String orderId, String revenueType, BigDecimal grossAmount,
                   BigDecimal feeAmount, BigDecimal netAmount, String status, String eventTitle) {
+        log.info(">>> [LEDGER_INIT] 정산 원장 객체 생성 - OrderId: {}, ArtistId: {}, Type: {}", 
+                 orderId, artistId, revenueType);
+        
         this.artistId = artistId;
         this.orderId = orderId;
         this.revenueType = revenueType;
@@ -96,6 +101,8 @@ public class Ledger {
      * 결제 취소 또는 환불 발생 시 해당 정산 건의 상태를 무효화(REFUNDED)함.
      */
     public void markAsRefunded() {
+        log.info(">>> [LEDGER_STATUS_UPDATE] 원장 환불 상태 변경 - LedgerId: {}, OrderId: {}", 
+                 this.ledgerId, this.orderId);
         this.status = "REFUNDED";
     }
 }

@@ -31,19 +31,21 @@ public class PaymentEventProducer {
      * * @param <T>              페이로드 데이터 타입 (제네릭)
      * @param targetRoutingKey 메시지가 도달할 목적지 큐의 라우팅 키 (예: "shop.payment.success")
      * @param orderId          주문 고유 번호
-     * @param status           처리 상태 (SUCCESS, FAIL 등)
+     * @param status           처리 상태 (SUCCESS, FAILED 등)
      * @param message          처리 결과 메시지
      * @param type             이벤트 유형 식별자
      * @param payload          추가 데이터 객체 (지갑 잔액, 결제 정보 등)
      */
     public <T> void sendDataResponse(String targetRoutingKey, String orderId, String status, String message, String type, T payload) {
-        
+        log.info(">>> [EVENT_PUBLISH] 메시지 발행 시도 - Target: {}, OrderId: {}, Status: {}, Type: {}", 
+                targetRoutingKey, orderId, status, type);
+
         // 공통 응답 DTO 생성: 제네릭을 사용하여 다양한 데이터 구조를 유연하게 수용함
         PaymentResponseDTO<T> responseDTO = new PaymentResponseDTO<>(orderId, status, message, type, payload);
         
         try {
             // 발송 데이터 로깅: 트래킹을 위해 발송 직전의 상세 데이터를 남김
-            log.info("[EVENT_PUBLISH] 페이로드 로깅 - OrderID: {}, 데이터: {}", orderId, payload);
+            log.info(">>> [EVENT_PUBLISH] 페이로드 데이터 로깅 - OrderId: {}, Payload: {}", orderId, payload);
 
             /**
              * RabbitMQ 메시지 발송
@@ -53,11 +55,12 @@ public class PaymentEventProducer {
              */
             rabbitTemplate.convertAndSend(EXCHANGE_NAME, targetRoutingKey, responseDTO);
             
-            log.info("[EVENT_PUBLISH] 발송 완료 - 목적지: {}, OrderID: {}, 상태: {}", targetRoutingKey, orderId, status);
+            log.info(">>> [EVENT_PUBLISH] RabbitMQ 메시지 발송 완료 - Target: {}, OrderId: {}, Status: {}", 
+                    targetRoutingKey, orderId, status);
             
         } catch (AmqpException e) {
             // 메시지 브로커(RabbitMQ) 연결 실패 또는 메시지 거부 시 예외 처리
-            log.error("[EVENT_PUBLISH] 메시지 발송 실패 - OrderID: {}, 사유: {}", orderId, e.getMessage());
+            log.error(">>> [EVENT_PUBLISH] 메시지 발행 실패 - OrderId: {}, Error: {}", orderId, e.getMessage());
             // 필요 시 재시도 로직이나 DB 별도 기록 로직 추가 검토 필요
         }
     }

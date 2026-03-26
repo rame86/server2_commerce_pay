@@ -38,7 +38,7 @@ public class ArtistSettlementController {
     public ResponseEntity<ArtistSettlementResponseDTO> getSettlement(
             @RequestHeader("x-user-id") Long artistId) {
 
-        log.info("[ARTIST SETTLEMENT] 정산 대시보드 요청 - artistId: {}", artistId);
+        log.info(">>> [ARTIST_SETTLEMENT] 정산 대시보드 요청 수신 - ArtistId: {}", artistId);
         ArtistSettlementResponseDTO response = artistSettlementService.getSettlementDashboard(artistId);
         return ResponseEntity.ok(response);
     }
@@ -46,7 +46,7 @@ public class ArtistSettlementController {
     // 관리자 서비스에서 아티스트 상세 조회 시 호출하는 엔드포인트 복구
     @GetMapping("/{artistId}")
     public ResponseEntity<ArtistAccountResponse> getArtistAccount(@PathVariable("artistId") Long artistId) {
-        log.info("[WALLET] 아티스트 계좌 정보 조회 요청 - artistId: {}", artistId);
+        log.info(">>> [WALLET] 아티스트 계좌 정보 조회 요청 수신 - ArtistId: {}", artistId);
         ArtistAccount account = settlementService.getArtistAccount(artistId);
 
         ArtistAccountResponse response = ArtistAccountResponse.builder()

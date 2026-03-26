@@ -1,5 +1,4 @@
 // src/main/java/com/example/payment/messaging/listener/PaymentEventListener.java
-
 package com.example.payment.messaging.listener;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -31,18 +30,19 @@ public class PaymentEventListener {
      */
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
     public void receiveMessage(PaymentEventDTO dto) {
-        log.info("[MQ_RECEIVE] 수신 - 타입: {}, 주문번호: {}, 목적지: {}", 
+        log.info(">>> [MQ_RECEIVE] 메시지 수신 및 라우팅 시작 - Type: {}, OrderId: {}, ReplyKey: {}", 
                 dto.getType(), dto.getOrderId(), dto.getReplyRoutingKey());
 
         // 수량 정보 누락 시 기본값 1로 보정
         if (dto.getQuantity() == null) {
+            log.debug(">>> [MQ_FIX] 수량 정보 누락으로 인한 기본값(1) 설정 - OrderId: {}", dto.getOrderId());
             dto.setQuantity(1);
         }
 
         // [이벤트 타입별 분기] 직접적인 비즈니스 로직은 호출 서비스로 위임
         switch (dto.getType()) {
             case "PAYMENT" -> paymentService.processPaymentEvent(dto);      // 결제 승인
-            case "REFUND" -> paymentService.processRefundEvent(dto);        // 환불 처리
+            case "REFUND" -> paymentService.processRefundEvent(dto);         // 환불 처리
             case "DONATION" -> paymentService.processDonationEvent(dto);    // 후원 처리
 
             // 관리자 및 통계 관련 라우팅
@@ -53,7 +53,7 @@ public class PaymentEventListener {
             case "ARTIST_SETTLEMENT_REQUEST" -> paymentService.processArtistSettlementRequest(dto);
             case "ARTIST_APPROVE" -> paymentService.processArtistWalletCreate(dto);
 
-            default -> log.error("[MQ_ERROR] 알 수 없는 메시지 타입: {}", dto.getType());
+            default -> log.error(">>> [MQ_ERROR] 지원하지 않는 메시지 타입: {}", dto.getType());
         }
     }
 
@@ -63,18 +63,19 @@ public class PaymentEventListener {
      */
     private void handleAdminRequest(PaymentEventDTO dto) {
         String action = dto.getOrderId(); // 관리자 요청에서는 orderId를 기능 구분값으로 활용
+        log.info(">>> [ADMIN_ROUTING] 관리자 상세 요청 라우팅 시작 - Action: {}, OrderId: {}", action, dto.getOrderId());
         
         if (action == null) {
-            log.error("[ADMIN_ERROR] 상세 기능 구분(action) 누락");
+            log.error(">>> [ADMIN_ERROR] 상세 기능 구분(action) 데이터가 누락되었습니다.");
             return;
         }
 
         switch (action) {
-            case "GETALL" -> settlementEventService.processAdminGetAll(dto);        // 전체 내역 조회
-            case "ARTIST" -> settlementEventService.processAdminArtistDetail(dto);  // 아티스트별 상세
-            case "SUMMARY" -> settlementEventService.processAdminSummary(dto);      // 정산 요약 통계
+            case "GETALL" -> settlementEventService.processAdminGetAll(dto);         // 전체 내역 조회
+            case "ARTIST" -> settlementEventService.processAdminArtistDetail(dto);   // 아티스트별 상세
+            case "SUMMARY" -> settlementEventService.processAdminSummary(dto);       // 정산 요약 통계
             case "USER_DETAIL" -> settlementEventService.processAdminUserDetail(dto); // 유저 결제 상세
-            default -> log.error("[ADMIN_ERROR] 지원하지 않는 액션: {}", action);
+            default -> log.error(">>> [ADMIN_ERROR] 정의되지 않은 관리자 액션: {}", action);
         }
     }
 }

@@ -1,4 +1,4 @@
-//src/main/java/com/example/payment/controller/PaymentController.java
+// src/main/java/com/example/payment/controller/PaymentController.java
 package com.example.payment.controller;
 
 import java.net.URI;
@@ -52,7 +52,7 @@ public class PaymentController {
     public ResponseEntity<PaymentHistoryResponseDTO> getMyPayment(
             @RequestHeader(USER_ID_HEADER) Long memberId) {
         
-        log.info("[MY_PAYMENT] 조회 요청 - memberId: {}", memberId);
+        log.info(">>> [MY_PAYMENT] 조회 요청 시작 - MemberId: {}", memberId);
         PaymentHistoryResponseDTO response = chargeService.getPaymentHistory(memberId);
         return ResponseEntity.ok(response);
     }
@@ -68,7 +68,7 @@ public class PaymentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ChargeRequestDTO request) {
 
-        log.info("[CHARGE_READY] 충전 준비 요청 - memberId: {}, payType: {}, amount: {}", 
+        log.info(">>> [CHARGE_READY] 충전 준비 요청 시작 - MemberId: {}, PayType: {}, Amount: {}", 
                 memberId, request.getPayType(), request.getAmount());
 
         String token = "";
@@ -77,7 +77,7 @@ public class PaymentController {
         }
 
         ChargeReadyResponseDTO response = chargeService.readyPayment(memberId, request, token);
-        log.info("[CHARGE_READY] 준비 완료 - chargeId: {}, TID: {}", response.chargeId(), response.providerTid());
+        log.info(">>> [CHARGE_READY] 준비 처리 완료 - ChargeId: {}, TID: {}", response.chargeId(), response.providerTid());
         
         return ResponseEntity.ok(response);
     }
@@ -93,11 +93,11 @@ public class PaymentController {
             @RequestParam(PARAM_CHARGE_ID) UUID chargeId,
             @RequestHeader(USER_ID_HEADER) String memberId) {
 
-        log.info("[CHARGE_APPROVE] 승인 콜백 수신 - chargeId: {}, memberId: {}", chargeId, memberId);
+        log.info(">>> [CHARGE_APPROVE] 승인 콜백 수신 - ChargeId: {}, MemberId: {}", chargeId, memberId);
 
         chargeService.approvePayment(chargeId, pgToken, memberId);
 
-        log.info("[CHARGE_APPROVE] 승인 처리 성공 - 프론트엔드 리다이렉트");
+        log.info(">>> [CHARGE_APPROVE] 최종 승인 성공 - 프론트엔드 리다이렉트 수행");
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl.success()))
                 .build();
@@ -109,7 +109,7 @@ public class PaymentController {
      */
     @GetMapping("/charge/kakaopay/fail")
     public ResponseEntity<Void> failPayment() {
-        log.warn("[CHARGE_FAIL] 결제 실패 콜백 수신 - 실패 페이지 리다이렉트");
+        log.warn(">>> [CHARGE_FAIL] 결제 실패 콜백 수신 - 실패 페이지 리다이렉트");
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl.fail()))
                 .build();
@@ -121,7 +121,7 @@ public class PaymentController {
      */
     @GetMapping("/charge/kakaopay/cancel")
     public ResponseEntity<Void> cancelPayment() {
-        log.info("[CHARGE_CANCEL] 결제 취소 콜백 수신 - 취소 페이지 리다이렉트");
+        log.info(">>> [CHARGE_CANCEL] 결제 취소 콜백 수신 - 취소 페이지 리다이렉트");
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl.cancel()))
                 .build();
@@ -135,7 +135,7 @@ public class PaymentController {
     public ResponseEntity<UserDetailPaymentResponseDTO> getUserDetail(
             @PathVariable(name = "memberId") Long memberId) {
             
-        log.info("[USER_DETAIL] 대시보드 데이터 조회 요청 - targetMemberId: {}", memberId);
+        log.info(">>> [USER_DETAIL] 대시보드 데이터 조회 요청 시작 - TargetMemberId: {}", memberId);
         UserDetailPaymentResponseDTO response = userDashboardService.getUserDashboardDetail(memberId);
         return ResponseEntity.ok(response);
     }

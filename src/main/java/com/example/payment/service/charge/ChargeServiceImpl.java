@@ -61,7 +61,7 @@ public class ChargeServiceImpl implements ChargeService {
     @Override
     @Transactional
     public ChargeReadyResponseDTO readyPayment(Long memberId, ChargeRequestDTO request, String token) {
-        log.info("[READY_PAYMENT] 요청 수신 - memberId: {}, amount: {}", memberId, request.getAmount());
+        log.info(">>> [READY_PAYMENT] 요청 수신 - memberId: {}, amount: {}", memberId, request.getAmount());
 
         // 1. 사용자 지갑 조회 및 유효성 검증 (지갑이 없거나 비활성 상태면 예외 처리)
         Wallet wallet = walletRepository.findByMemberId(memberId)
@@ -104,7 +104,7 @@ public class ChargeServiceImpl implements ChargeService {
         } catch (Exception e) {
             // PG사 통신 실패 등 오류 발생 시 원장 상태를 실패(FAIL)로 즉시 변경
             charge.fail(e.getMessage()); 
-            log.error("[READY_PAYMENT] 실패 - chargeId: {}", charge.getChargeId(), e);
+            log.error(">>> [READY_PAYMENT] 실패 - chargeId: {}", charge.getChargeId(), e);
             throw new RuntimeException("결제 준비 실패: " + e.getMessage());
         }
     }
@@ -116,7 +116,7 @@ public class ChargeServiceImpl implements ChargeService {
      */
     @Override
     public void approvePayment(UUID chargeId, String pgToken, String memberId) {
-        log.info("[APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);
+        log.info(">>> [APPROVE_PAYMENT] 승인 요청 수신 - chargeId: {}", chargeId);
 
         // 1. 내부 원장 무결성 검증 (해당 결제건이 존재하는지, 상태가 PENDING인지 확인)
         Charge charge = chargeRepository.findById(chargeId)
@@ -143,7 +143,7 @@ public class ChargeServiceImpl implements ChargeService {
         } catch (Exception e) {
             // 결제 승인 실패 시 실패 상태를 별도 트랜잭션으로 확실하게 DB에 기록
             self.processApprovalFail(chargeId, e.getMessage());
-            log.error("[APPROVE_PAYMENT] 실패 - chargeId: {}", chargeId, e);
+            log.error(">>> [APPROVE_PAYMENT] 실패 - chargeId: {}", chargeId, e);
             throw new RuntimeException("결제 승인 실패: " + e.getMessage());
         }
     }
@@ -180,7 +180,7 @@ public class ChargeServiceImpl implements ChargeService {
         BigDecimal balance = walletService.getBalance(Long.valueOf(memberId));
         walletService.updateRedisBalance(Long.valueOf(memberId), balance);
 
-        log.info("[APPROVE_PAYMENT] 원장 및 잔액 반영 완료");
+        log.info(">>> [APPROVE_PAYMENT] 원장 및 잔액 반영 완료");
     }
 
     /**
@@ -205,7 +205,7 @@ public class ChargeServiceImpl implements ChargeService {
         // 1. 지갑 조회. 회원의 지갑이 아직 없다면 초기 잔액 0원인 지갑을 즉시 생성 (Lazy Init)
         Wallet wallet = walletRepository.findByMemberId(memberId)
                 .orElseGet(() -> {
-                    log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
+                    log.info(">>> [WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
                     Wallet newWallet = Wallet.builder()
                             .memberId(memberId)
                             .balance(BigDecimal.ZERO)
