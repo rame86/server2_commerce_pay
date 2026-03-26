@@ -11,6 +11,10 @@ import com.example.payment.dto.event.PaymentResponseDTO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * [결제 이벤트 발행자]
+ * 결제 처리 결과를 RabbitMQ Exchange로 발행하여 타 마이크로서비스(MSA)에 전파함.
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -18,26 +22,43 @@ public class PaymentEventProducer {
 
     private final RabbitTemplate rabbitTemplate;
     
-    // Exchange: MSA 공용 분배기 유지
+    // MSA 전체에서 공유되는 Topic Exchange 이름
     private static final String EXCHANGE_NAME = RabbitMQConfig.EXCHANGE_NAME;
 
     /**
-     * 상태 업데이트 발송
-     * targetRoutingKey를 받아서 요청한 곳으로 정확히 되돌려줌
+     * [데이터 응답 메시지 발송]
+     * 결제 성공/실패 여부와 필요한 페이로드를 특정 서비스로 전송함.
+     * * @param <T>              페이로드 데이터 타입 (제네릭)
+     * @param targetRoutingKey 메시지가 도달할 목적지 큐의 라우팅 키 (예: "shop.payment.success")
+     * @param orderId          주문 고유 번호
+     * @param status           처리 상태 (SUCCESS, FAIL 등)
+     * @param message          처리 결과 메시지
+     * @param type             이벤트 유형 식별자
+     * @param payload          추가 데이터 객체 (지갑 잔액, 결제 정보 등)
      */
     public <T> void sendDataResponse(String targetRoutingKey, String orderId, String status, String message, String type, T payload) {
-        // 제네릭 타입 추론을 위해 다이아몬드 연산자(<>) 명시
+        
+        // 공통 응답 DTO 생성: 제네릭을 사용하여 다양한 데이터 구조를 유연하게 수용함
         PaymentResponseDTO<T> responseDTO = new PaymentResponseDTO<>(orderId, status, message, type, payload);
         
         try {
-            // [추가] 발송 직전 Payload 상세 데이터 로깅
-            log.info("발송 예정 페이로드 상세 데이터 - OrderID: {}, 데이터: {}", orderId, payload);
+            // 발송 데이터 로깅: 트래킹을 위해 발송 직전의 상세 데이터를 남김
+            log.info("[EVENT_PUBLISH] 페이로드 로깅 - OrderID: {}, 데이터: {}", orderId, payload);
 
-            // targetRoutingKey에 따라 Shop 또는 Res 큐로 동적 발송됨
+            /**
+             * RabbitMQ 메시지 발송
+             * 1. EXCHANGE_NAME: 메시지를 받을 교환기
+             * 2. targetRoutingKey: 교환기가 메시지를 배달할 경로 키
+             * 3. responseDTO: 메시지 바디 (JSON으로 직렬화되어 전송됨)
+             */
             rabbitTemplate.convertAndSend(EXCHANGE_NAME, targetRoutingKey, responseDTO);
-            log.info("상태 업데이트 발송 완료 - 목적지: {}, OrderID: {}, 상태: {}", targetRoutingKey, orderId, status);
+            
+            log.info("[EVENT_PUBLISH] 발송 완료 - 목적지: {}, OrderID: {}, 상태: {}", targetRoutingKey, orderId, status);
+            
         } catch (AmqpException e) {
-            log.error("메시지 발송 실패 - OrderID: {}, 에러: {}", orderId, e.getMessage());
+            // 메시지 브로커(RabbitMQ) 연결 실패 또는 메시지 거부 시 예외 처리
+            log.error("[EVENT_PUBLISH] 메시지 발송 실패 - OrderID: {}, 사유: {}", orderId, e.getMessage());
+            // 필요 시 재시도 로직이나 DB 별도 기록 로직 추가 검토 필요
         }
     }
 }
