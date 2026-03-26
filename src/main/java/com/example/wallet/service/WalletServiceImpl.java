@@ -20,6 +20,10 @@ import com.example.wallet.repository.WalletRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * [지갑 비즈니스 로직 구현체]
+ * 포인트 차감/적립, 결제 및 환불 이력 관리, 캐시(Redis) 잔액 동기화를 수행함.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -29,19 +33,28 @@ public class WalletServiceImpl implements WalletService {
     private final TransactionHistoryRepository transactionRepository;
     private final StringRedisTemplate redisTemplate;
 
+    /**
+     * [전체 지갑 조회]
+     * 시스템에 등록된 모든 지갑 정보를 DTO 리스트로 반환함.
+     */
     @Override
-    @Transactional(readOnly = true) // 읽기 전용 트랜잭션으로 성능 최적화
+    @Transactional(readOnly = true)
     public List<WalletDTO> getAllWallets() {
+        log.info(">>> [WALLET_ALL] 전체 지갑 목록 조회 요청");
         return walletRepository.findAll().stream()
                 .map(this::convertToResponseDTO)
                 .collect(Collectors.toList());
     }
 
-    // 자체 지갑 조회 로직 (없으면 자동 생성)
+    /**
+     * [지갑 조회 및 자동 생성 (Internal)]
+     * 지갑이 존재하지 않는 회원의 경우, 초기 잔액 0원인 지갑을 즉시 생성함 (Lazy Initialization).
+     */
     private Wallet getOrCreateWallet(Long memberId) {
+        log.info(">>> [WALLET_GET_OR_CREATE] 지갑 정보 확인 - MemberId: {}", memberId);
         return walletRepository.findByMemberId(memberId)
                 .orElseGet(() -> {
-                    log.info("[WALLET_CREATE] 지갑 자동 생성 - memberId: {}", memberId);
+                    log.info(">>> [WALLET_CREATE] 신규 지갑 자동 생성 - MemberId: {}", memberId);
                     Wallet newWallet = Wallet.builder()
                             .memberId(memberId)
                             .balance(BigDecimal.ZERO)
@@ -51,109 +64,118 @@ public class WalletServiceImpl implements WalletService {
                 });
     }
 
+    /**
+     * [현재 잔액 조회]
+     * 특정 회원의 실시간 지갑 잔액을 반환함.
+     */
     @Override
     @Transactional
     public BigDecimal getBalance(Long memberId) {
-        // 지갑 정보가 없으면 지갑 자동 생성 후 잔액 반환
+        log.info(">>> [WALLET_BALANCE] 잔액 확인 요청 - MemberId: {}", memberId);
         return getOrCreateWallet(memberId).getBalance();
     }
 
+    /**
+     * [결제 처리 (포인트 차감)]
+     * 주문 이벤트를 수신하여 사용자의 포인트를 차감하고 거래 이력을 기록함.
+     */
     @Override
     @Transactional
     public void processPayment(PaymentEventDTO dto) {
-        // 지갑찾기 및 없으면 자동 생성
-        Wallet wallet = getOrCreateWallet(dto.getMemberId());
+        log.info(">>> [PAYMENT_PROCESS] 결제 포인트 차감 시작 - OrderId: {}, Amount: {}", dto.getOrderId(), dto.getAmount());
 
-        // 활성화된 지갑인지 확인
+        // 1. 지갑 확보 및 상태 검증
+        Wallet wallet = getOrCreateWallet(dto.getMemberId());
         if (!"ACTIVE".equals(wallet.getStatus())) {
+            log.error(">>> [PAYMENT_FAIL] 지갑 비활성 상태 - WalletId: {}", wallet.getWalletId());
             throw new IllegalStateException("유효하지 않은 지갑 상태입니다.");
         }
 
-        // 지갑의 잔액 가져오기
-        BigDecimal currentBalance = wallet.getBalance();
-
-        // 주문금액과 잔액 비교 (Entity 내부 deductBalance 메서드에서 검증 가능)
-        if (currentBalance.compareTo(dto.getAmount()) < 0) {
-            throw new IllegalStateException("잔액이 부족합니다.");
-        }
-
-        // 지갑 잔액에서 주문금액 뺀후 변수저장 및 업데이트
-        // 낙관적 락(Version) 기반 업데이트는 JPA가 커밋 시점에 자동으로 처리함
+        // 2. 잔액 검증 및 차감 (낙관적 락 적용됨)
+        // Entity 내부의 deductBalance 메서드에서 잔액 부족 체크 수행
         wallet.deductBalance(dto.getAmount());
         BigDecimal newBalance = wallet.getBalance();
 
-        // 결제내역 저장
+        // 3. 거래 이력(원장) 저장
+        String paymentDesc = "결제 - " + (dto.getEventTitle() != null ? dto.getEventTitle() : "상품 결제");
         recordTransaction(
                 wallet.getWalletId(),
                 dto.getType(),
-                dto.getAmount().negate(),
+                dto.getAmount().negate(), // 차감액이므로 음수 기록
                 newBalance,
                 dto.getOrderId(),
-                dto.getEventTitle() != null ? dto.getEventTitle() : "결제 차감",
+                paymentDesc,
                 dto.getOriginalPrice(),
                 dto.getFee(),
                 dto.getShippingFee(),
                 dto.getQuantity(),
                 dto.getArtistId());
+
+        log.info(">>> [PAYMENT_SUCCESS] 결제 차감 완료 - New Balance: {}", newBalance);
     }
 
+    /**
+     * [환불 처리 (포인트 복구)]
+     * 결제 취소 이벤트를 수신하여 차감되었던 금액을 지갑에 다시 예치함.
+     */
     @Override
     @Transactional
     public void processRefund(PaymentEventDTO dto) {
-        // 원본 결제 내역 검증
-        TransactionHistory paymentTx = transactionRepository.findTopByReferenceIdAndTransactionType(dto.getOrderId(),
-                "PAYMENT");
+        log.info(">>> [REFUND_PROCESS] 환불 처리 시작 - OrderId: {}", dto.getOrderId());
+
+        // 1. 원본 결제 내역 존재 여부 확인
+        TransactionHistory paymentTx = transactionRepository.findTopByReferenceIdAndTransactionType(dto.getOrderId(), "PAYMENT");
         if (paymentTx == null) {
+            log.error(">>> [REFUND_FAIL] 원본 결제 데이터 없음 - OrderId: {}", dto.getOrderId());
             throw new IllegalArgumentException("원본 결제 내역을 찾을 수 없습니다.");
         }
 
-        // 멱등성 보장: 이미 환불된 내역인지 확인
+        // 2. 멱등성 검증 (중복 환불 방지)
         if (transactionRepository.existsByReferenceIdAndTransactionType(dto.getOrderId(), "REFUND")) {
-            log.info("이미 환불 처리된 주문입니다. 주문번호: {}", dto.getOrderId());
+            log.warn(">>> [REFUND_SKIP] 이미 완료된 환불 요청 - OrderId: {}", dto.getOrderId());
             return;
         }
 
-        UUID walletId = paymentTx.getWalletId();
-
-        // DB에서 조회한 금액을 안전하게 확보
-        BigDecimal paymentAmount = paymentTx.getAmount();
-        log.info("결제된 금액 : " + paymentAmount);
-
-        BigDecimal refundAmount = paymentAmount.abs();
-        log.info("환불 요청 금액 : " + refundAmount);
-
-        Wallet wallet = walletRepository.findById(walletId)
+        // 3. 금액 복구 (Dirty Checking 활용)
+        BigDecimal refundAmount = paymentTx.getAmount().abs(); // 저장된 음수 금액을 양수로 변환
+        Wallet wallet = walletRepository.findById(paymentTx.getWalletId())
                 .orElseThrow(() -> new IllegalArgumentException("지갑을 찾을 수 없습니다."));
 
-        // 현재 잔액 조회
-        BigDecimal currentBalance = wallet.getBalance();
-        log.info("현재 잔액 : " + currentBalance);
-
-        // 금액 환불하기 (Dirty Checking으로 자동 업데이트)
         wallet.addBalance(refundAmount);
         BigDecimal newBalance = wallet.getBalance();
-        log.info("환불후 잔액 : " + newBalance);
 
-        // 환불내역 저장
+        // 4. 환불 이력 저장
+        // 원본 결제 내역의 description에서 "결제 - " 접두사를 제거 후 "환불 - " 접두사로 대체
+        String originalDesc = paymentTx.getDescription() != null ? paymentTx.getDescription() : "결제 취소";
+        String refundDesc;
+        if (originalDesc.startsWith("결제 - ")) {
+            refundDesc = "환불 - " + originalDesc.substring("결제 - ".length());
+        } else {
+            refundDesc = "환불 - " + originalDesc;
+        }
         recordTransaction(
-                walletId,
+                wallet.getWalletId(),
                 dto.getType(),
                 refundAmount,
                 newBalance,
                 dto.getOrderId(),
-                dto.getEventTitle() != null ? dto.getEventTitle() : "결제 취소 환불",
+                refundDesc,
                 dto.getOriginalPrice(),
                 dto.getFee(),
                 dto.getShippingFee(),
                 dto.getQuantity(),
                 dto.getArtistId());
+
+        log.info(">>> [REFUND_SUCCESS] 포인트 복구 완료 - Refund: {}, New Balance: {}", refundAmount, newBalance);
     }
 
-    // 트랜잭션 원장 기록 공통 메서드
+    /**
+     * [거래 이력 기록 공통 로직]
+     */
     private void recordTransaction(UUID walletId, String type, BigDecimal amount, BigDecimal balanceAfter,
-            String referenceId, String description, BigDecimal originalAmount, BigDecimal fee,
-            BigDecimal shippingFee, Integer quantity, Long artistId) {
-
+                                  String referenceId, String description, BigDecimal originalAmount, BigDecimal fee,
+                                  BigDecimal shippingFee, Integer quantity, Long artistId) {
+        log.debug(">>> [TX_RECORD] 거래 내역 생성 중 - RefId: {}, Type: {}", referenceId, type);
         TransactionHistory th = TransactionHistory.builder()
                 .walletId(walletId)
                 .transactionType(type)
@@ -171,7 +193,9 @@ public class WalletServiceImpl implements WalletService {
         transactionRepository.save(th);
     }
 
-    // DTO 변환 유틸리티
+    /**
+     * [엔티티 -> DTO 변환]
+     */
     private WalletDTO convertToResponseDTO(Wallet wallet) {
         return WalletDTO.builder()
                 .walletId(wallet.getWalletId())
@@ -182,9 +206,13 @@ public class WalletServiceImpl implements WalletService {
                 .build();
     }
 
+    /**
+     * [Redis 잔액 캐시 동기화]
+     * DB 트랜잭션 성공 후 호출되어, 인증 서비스(Core) 등에서 활용하는 잔액 캐시 정보를 업데이트함.
+     */
     @Override
     public void updateRedisBalance(Long memberId, BigDecimal balance) {
+        log.info(">>> [REDIS_SYNC] 잔액 캐시 업데이트 - MemberId: {}, Balance: {}", memberId, balance);
         redisTemplate.opsForHash().put("AUTH:MEMBER:" + memberId, "balance", balance.toPlainString());
     }
-
 }

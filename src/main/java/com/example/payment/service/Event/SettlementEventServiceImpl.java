@@ -35,6 +35,11 @@ import com.example.wallet.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * [정산 및 관리자 이벤트 처리 서비스 구현체]
+ * 메시지 큐를 통해 관리자(Admin) 측에서 요청한 대시보드 통계 및
+ * 유저/아티스트 상세 조회 이벤트를 처리하고 응답을 비동기로 반환함.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -49,13 +54,21 @@ public class SettlementEventServiceImpl implements SettlementEventService {
     private final WalletRepository walletRepository;
     private final TransactionHistoryRepository transactionHistoryRepository;
 
+    /**
+     * [관리자용 대시보드: 정산 통계 집계]
+     * 당월 1일부터 말일까지의 정산 원장(Ledger)을 조회하여
+     * 전체 통계와 아티스트별 정산 요약을 계산해 반환함.
+     */
     @Override
     @Transactional(readOnly = true)
     public void processAdminSettlement(PaymentEventDTO dto) {
         String replyKey = dto.getReplyRoutingKey();
         String orderId = dto.getOrderId();
 
+        log.info(">>> [ADMIN_SETTLEMENT] 정산 대시보드 통계 집계 시작 - OrderId: {}", orderId);
+
         try {
+            // 시간이 걸릴 수 있으므로 'PROCESSING' 상태를 먼저 알려줌
             producer.sendDataResponse(replyKey, orderId, "PROCESSING", "관리자 대시보드 데이터 집계 중입니다.", dto.getType(), null);
 
             // 1. 조회 기간 설정 (당월 1일 ~ 말일)
@@ -70,18 +83,21 @@ public class SettlementEventServiceImpl implements SettlementEventService {
             DashboardSummaryDTO summary = calculateDashboardSummary(ledgers);
             List<ArtistSettlementRowDTO> artistSettlements = calculateArtistSettlements(ledgers);
 
-            log.info("[ADMIN_SETTLEMENT] 집계 데이터 확인 - OrderId: {}, 조회된 원장 수: {}", orderId, ledgers.size());
+            log.info(">>> [ADMIN_SETTLEMENT] 집계 완료 - OrderId: {}, 원장 수: {}건", orderId, ledgers.size());
 
             // 4. 응답 전송
             AdminDashboardResponseDTO payload = new AdminDashboardResponseDTO(summary, artistSettlements);
             producer.sendDataResponse(replyKey, orderId, "COMPLETE", "대시보드 데이터 조회 및 집계 성공", dto.getType(), payload);
 
         } catch (Exception e) {
-            log.error("[ADMIN_SETTLEMENT] 대시보드 데이터 집계 실패 - 사유: {}", e.getMessage(), e);
+            log.error(">>> [ADMIN_SETTLEMENT] 통계 집계 실패 - OrderId: {}, 사유: {}", orderId, e.getMessage());
             producer.sendDataResponse(replyKey, orderId, "FAIL", "조회 실패: " + e.getMessage(), "ERROR", null);
         }
     }
 
+    /**
+     * [내부 로직: 대시보드 상단 요약 통계 계산]
+     */
     private DashboardSummaryDTO calculateDashboardSummary(List<Ledger> ledgers) {
         BigDecimal totalGrossAmount = BigDecimal.ZERO;
         BigDecimal totalPlatformFee = BigDecimal.ZERO;
@@ -103,6 +119,9 @@ public class SettlementEventServiceImpl implements SettlementEventService {
         return new DashboardSummaryDTO(totalGrossAmount, totalPlatformFee, totalExpectedAmount, totalSettledAmount);
     }
 
+    /**
+     * [내부 로직: 아티스트별 정산 목록 그룹화 계산]
+     */
     private List<ArtistSettlementRowDTO> calculateArtistSettlements(List<Ledger> ledgers) {
         record ArtistStatusKey(Long artistId, String status) {}
 
@@ -138,11 +157,13 @@ public class SettlementEventServiceImpl implements SettlementEventService {
                 }).toList();
     }
 
-    // 1. 관리자용1: 모든 지갑 정보 조회 (GETALL)
+    /**
+     * [관리자용: 모든 지갑 정보 목록 조회]
+     */
     @Override
     public void processAdminGetAll(PaymentEventDTO dto) {
+        log.info(">>> [ADMIN_GETALL] 전체 지갑 정보 목록 조회 요청 수신 - OrderId: {}", dto.getOrderId());
         try {
-            log.info(">>> [ADMIN-GETALL] 모든 지갑 정보 조회 요청 수신");
             List<WalletDTO> payload = walletService.getAllWallets();
             sendSuccessResponse(dto, payload);
         } catch (Exception e) {
@@ -150,14 +171,17 @@ public class SettlementEventServiceImpl implements SettlementEventService {
         }
     }
 
-    // 2. 관리자용2: 아티스트 정산 정보 조회 (ARTIST)
+    /**
+     * [관리자용: 특정 아티스트 상세 정산 계좌 조회]
+     */
     @Override
     public void processAdminArtistDetail(PaymentEventDTO dto) {
+        Long artistId = dto.getArtistId();
+        log.info(">>> [ADMIN_ARTIST_DETAIL] 아티스트 정산 상세 조회 시작 - ArtistId: {}", artistId);
+        
         try {
-            Long artistId = dto.getArtistId();
             if (artistId == null) throw new IllegalArgumentException("artistId가 누락되었습니다.");
 
-            log.info(">>> [ADMIN-ARTIST] 아티스트 {}번 정산 정보 조회", artistId);
             ArtistAccount payload = settlementService.getArtistAccount(artistId); // 아티스트 도메인 기능 재사용
             sendSuccessResponse(dto, payload);
         } catch (Exception e) {
@@ -165,18 +189,23 @@ public class SettlementEventServiceImpl implements SettlementEventService {
         }
     }
 
-    // 3. 관리자용3: 유저 결제 요약 정보 조회 (SUMMARY)
+    /**
+     * [관리자용: 여러 유저의 결제 요약 상태 조회]
+     * 전달받은 다수의 memberId 리스트를 기반으로 각 유저의 잔액과 누적 결제 횟수를 집계함.
+     */
     @Override
     @Transactional(readOnly = true)
     public void processAdminSummary(PaymentEventDTO dto) {
+        List<Long> memberIds = dto.getAllMemberId();
+
+        log.info(">>> [ADMIN_USER_SUMMARY] 유저 요약 정보 일괄 조회 시작 - 요청 인원수: {}", 
+                 (memberIds != null ? memberIds.size() : 0));
+
         try {
-            List<Long> memberIds = dto.getAllMemberId();
             if (memberIds == null || memberIds.isEmpty()) {
                 throw new IllegalArgumentException("allMemberId 리스트가 누락되었거나 비어있습니다.");
             }
 
-            log.info(">>> [ADMIN-SUMMARY] 유저 결제 요약 정보 조회: {}명", memberIds.size());
-            
             List<UserPaymentSummaryDTO> payload = memberIds.stream().map(mid -> {
                 return walletRepository.findByMemberId(mid)
                     .map(wallet -> {
@@ -196,16 +225,19 @@ public class SettlementEventServiceImpl implements SettlementEventService {
         }
     }
 
-    // 4. 관리자용4: 유저 상세 내역 조회 (USER_DETAIL)
+    /**
+     * [관리자용: 특정 유저의 상세 결제 및 포인트 내역 조회]
+     */
     @Override
     @Transactional(readOnly = true)
     public void processAdminUserDetail(PaymentEventDTO dto) {
+        Long memberId = dto.getMemberId();
+        
+        log.info(">>> [ADMIN_USER_DETAIL] 특정 유저 상세 내역 조회 시작 - MemberId: {}", memberId);
+
         try {
-            Long memberId = dto.getMemberId();
             if (memberId == null) throw new IllegalArgumentException("memberId가 누락되었습니다.");
 
-            log.info(">>> [ADMIN-USER_DETAIL] 유저 ID {} 상세 내역 조회", memberId);
-            
             Wallet wallet = walletRepository.findByMemberId(memberId).orElse(null);
             UserDetailPaymentResponseDTO payload;
 
@@ -252,8 +284,14 @@ public class SettlementEventServiceImpl implements SettlementEventService {
             sendFailResponse(dto, "유저 상세 내역 조회 실패", e);
         }
     }
-    // 성공
+
+    /**
+     * [공통] 성공 응답 MQ 발송 로직
+     */
     private <T> void sendSuccessResponse(PaymentEventDTO dto, T payload) {
+        log.info(">>> [MQ_SUCCESS_SEND] 처리 완료. 응답 발송 준비 - OrderId: {}, Destination: {}", 
+                 dto.getOrderId(), dto.getReplyRoutingKey());
+                 
         producer.sendDataResponse(
                 dto.getReplyRoutingKey(),
                 dto.getOrderId(), 
@@ -261,11 +299,15 @@ public class SettlementEventServiceImpl implements SettlementEventService {
                 "조회 완료",
                 "ADMIN",
                 payload);
-        log.info("[ADMIN-{}] 응답 발송 완료 - 목적지: {}", dto.getOrderId(), dto.getReplyRoutingKey());
     }
-    // 실패
+
+    /**
+     * [공통] 실패 응답 MQ 발송 로직
+     */
     private void sendFailResponse(PaymentEventDTO dto, String errorMessage, Exception e) {
-        log.error("[ADMIN-{}] 처리 에러: {}", dto.getOrderId(), e.getMessage());
+        log.error(">>> [MQ_FAIL_SEND] 처리 실패. 에러 응답 발송 - OrderId: {}, 사유: {}", 
+                  dto.getOrderId(), e.getMessage());
+                  
         producer.sendDataResponse(
                 dto.getReplyRoutingKey(),
                 dto.getOrderId(),
