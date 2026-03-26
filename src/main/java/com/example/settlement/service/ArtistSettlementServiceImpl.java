@@ -19,7 +19,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
 import com.example.payment.repository.ArtistAccountRepository;
+import com.example.settlement.dto.ArtistDonationResponse;
 import com.example.settlement.dto.ArtistSettlementResponseDTO;
+import com.example.settlement.dto.ArtistDonationResponse.DailyTrendDTO;
+import com.example.settlement.dto.ArtistDonationResponse.DonationMessageDTO;
+import com.example.settlement.dto.ArtistDonationResponse.DonorDTO;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.MonthlyRevenueSummary;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.RevenueComposition;
 import com.example.settlement.dto.ArtistSettlementResponseDTO.SettlementSummary;
@@ -232,4 +236,100 @@ public class ArtistSettlementServiceImpl implements ArtistSettlementService {
                     .build();
         }).collect(Collectors.toList());
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------
+    /**
+     * [수민 수정] 아티스트 후원 내역 및 통계 조회
+     * - status: COMPLETED, revenueType: DONATION 필터링
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ArtistDonationResponse artistDonation(Long artistId) {
+        log.info("[DONATION] 아티스트 후원 내역 조회 - artistId: {}", artistId);
+
+        // 1. 후원 데이터 전체 조회 (최신순)
+        // 레포지토리에 findByArtistIdAndStatusAndRevenueTypeOrderByCreatedAtDesc 필요
+        List<Ledger> donationLedgers = artistLedgerRepository
+                .findByArtistIdAndStatusAndRevenueTypeOrderByCreatedAtDesc(artistId, "COMPLETED", "DONATION");
+
+        // 2. 시간 범위 설정 (이번 달)
+        LocalDate now = LocalDate.now();
+        OffsetDateTime startOfThisMonth = now.withDayOfMonth(1).atStartOfDay().atOffset(ZoneOffset.UTC);
+
+        // 3. 통계 계산
+        // 총 누적 후원금
+        BigDecimal totalAmount = donationLedgers.stream()
+                .map(Ledger::getGrossAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 이번 달 후원금
+        BigDecimal thisMonthAmount = donationLedgers.stream()
+                .filter(l -> l.getCreatedAt() != null && !l.getCreatedAt().isBefore(startOfThisMonth))
+                .map(Ledger::getGrossAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // 최고 후원금 (단일건)
+        BigDecimal maxSingleDonation = donationLedgers.stream()
+                .map(Ledger::getGrossAmount)
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        // 4. 최근 후원 추이 (최근 7일 데이터 그룹핑)
+        Map<String, BigDecimal> dailyMap = donationLedgers.stream()
+                .limit(30) // 최근 30건 내에서 처리
+                .collect(Collectors.groupingBy(
+                        l -> l.getCreatedAt().format(DateTimeFormatter.ofPattern("MM/dd")),
+                        LinkedHashMap::new,
+                        Collectors.mapping(Ledger::getGrossAmount, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ));
+
+        List<DailyTrendDTO> dailyTrend = dailyMap.entrySet().stream()
+                .map(entry -> new DailyTrendDTO(entry.getKey(), entry.getValue().longValue()))
+                .collect(Collectors.toList());
+
+        // 5. Top 서포터즈 (이름별 그룹핑 및 합산 후 정렬)
+        Map<String, BigDecimal> donorMap = donationLedgers.stream()
+                .collect(Collectors.toMap(
+                        l -> (String)(l.getEventTitle() != null ? l.getEventTitle() : "익명의 팬"), 
+                        Ledger::getGrossAmount,
+                        BigDecimal::add // 🌟 3개만 쓰면 충분해!
+                ));
+
+        // 6. 응원 메시지 목록
+        List<ArtistDonationResponse.DonationMessageDTO> messages = donationLedgers.stream()
+                .map(l -> new ArtistDonationResponse.DonationMessageDTO( // 🌟 내부 클래스 경로 명시
+                        l.getEventTitle() != null ? l.getEventTitle() : "익명의 팬", 
+                        l.getCreatedAt().format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                        l.getGrossAmount().longValue(),
+                        l.getEventTitle() 
+                ))
+                .limit(20)
+                .collect(Collectors.toList());
+
+        // 7. 리스트 변환 및 정렬
+        List<ArtistDonationResponse.DonorDTO> topDonors = donorMap.entrySet().stream()
+                .map(entry -> new ArtistDonationResponse.DonorDTO( // 🌟 여기도 경로 명시!
+                        entry.getKey(), 
+                        entry.getValue().longValue()
+                ))
+                .sorted((d1, d2) -> Long.compare(d2.getTotal(), d1.getTotal())) 
+                .limit(5)
+                .collect(Collectors.toList());
+
+        return ArtistDonationResponse.builder()
+                .thisMonthAmount(thisMonthAmount.longValue())
+                .totalAmount(totalAmount.longValue())
+                .donorCount(donorMap.size())
+                .maxSingleDonation(maxSingleDonation.longValue())
+                .dailyTrend(dailyTrend)
+                .topDonors(topDonors)
+                .messages(messages)
+                .build();
+    }
+    //-----------------------------------------------------------------------------------------------------------
+    
+
+
 }
