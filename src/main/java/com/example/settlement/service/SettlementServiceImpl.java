@@ -79,7 +79,7 @@ public class SettlementServiceImpl implements SettlementService {
                 .grossAmount(grossAmount)
                 .feeAmount(feeAmount)
                 .netAmount(netAmount)
-                .status("COMPLETED") 
+                .status("false") 
                 .eventTitle(dto.getEventTitle()) 
                 .build();
 
