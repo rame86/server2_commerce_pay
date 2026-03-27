@@ -9,9 +9,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.payment.domain.ArtistAccount;
 import com.example.payment.domain.Ledger;
+import com.example.payment.domain.MonthlyTrend;
 import com.example.payment.dto.event.PaymentEventDTO;
 import com.example.payment.repository.ArtistAccountRepository;
 import com.example.payment.repository.LedgerRepository;
+
+import com.example.payment.repository.MonthlyTrendRepository;
+import java.time.format.DateTimeFormatter;
+import java.time.YearMonth;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +33,7 @@ public class SettlementServiceImpl implements SettlementService {
 
     private final LedgerRepository ledgerRepository;
     private final ArtistAccountRepository artistAccountRepository;
+    private final MonthlyTrendRepository monthlyTrendRepository;
 
     /**
      * [정산 프로세스 실행]
@@ -105,8 +111,30 @@ public class SettlementServiceImpl implements SettlementService {
         // 낙관적 락(Optimistic Lock)이 적용된 엔티티 메서드를 호출하여 누적액 및 출금 가능액 합산.
         account.addBalances(netAmount);
         
+        // 8. 월별 통계(Trend) 업데이트
+        // 어드민 대시보드 그래프를 위해 별도의 집계 테이블에 합산함.
+        updateMonthlyTrend(grossAmount, feeAmount);
+
         log.info(">>> [SETTLEMENT] 정산 완료 및 잔액 업데이트 성공 - ArtistId: {}, 최종 순익: {}", 
                  dto.getArtistId(), netAmount);
+    }
+
+    /**
+     * [내부 로직: 월별 트렌드 통계 업데이트]
+     */
+    private void updateMonthlyTrend(BigDecimal grossAmount, BigDecimal feeAmount) {
+        String currentMonthStr = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
+
+        MonthlyTrend trend = monthlyTrendRepository.findById(currentMonthStr)
+                .orElseGet(() -> {
+                    log.info(">>> [SETTLEMENT] 새 월별 트렌드 생성 - Month: {}", currentMonthStr);
+                    return MonthlyTrend.builder()
+                            .month(currentMonthStr)
+                            .build();
+                });
+
+        trend.addAmounts(grossAmount, feeAmount);
+        monthlyTrendRepository.save(trend);
     }
 
     /**

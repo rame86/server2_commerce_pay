@@ -3,6 +3,8 @@ package com.example.payment.dto.response;
 
 import java.util.List;
 
+import com.example.payment.dto.request.MonthlyTrendDTO;
+
 /**
  * [관리자 대시보드 전체 응답 DTO]
  * 상단 요약 통계(Summary)와 하단 아티스트별 정산 목록을 포함하는 최상위 객체.
@@ -12,7 +14,9 @@ public record AdminDashboardResponseDTO(
     DashboardSummaryDTO summary, 
     
     /** 아티스트별 상세 정산 행(Row) 리스트 */
-    List<ArtistSettlementRowDTO> artistSettlements
+    List<ArtistSettlementRowDTO> artistSettlements,
+
+    List<MonthlyTrendDTO> monthlyTrend
 ) {}
 
 /*
