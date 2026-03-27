@@ -38,7 +38,7 @@ public class MonthlyTrend {
     /** * 월 (YYYY-MM 형식)
      * 예: "2024-03"
      */
-    @Column(name = "stat_month", nullable = false, columnDefinition = "bpchar(7)")
+    @Column(name = "stat_month", nullable = false, unique = true, columnDefinition = "bpchar(7)")
     private String month;
 
     /** 월별 총 거래액 (Gross Amount 합계) */
