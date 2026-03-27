@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.payment.domain.ArtistAccount;
+import com.example.settlement.dto.ArtistDonationResponse;
 import com.example.settlement.dto.ArtistSettlementResponseDTO;
 import com.example.settlement.service.ArtistSettlementService;
 import com.example.settlement.service.SettlementService;
@@ -56,4 +57,28 @@ public class ArtistSettlementController {
 
         return ResponseEntity.ok(response);
     }
+
+
+    //-----------------------------------------------------------------------------------------------------------
+    //-----------------------------------------------------------------------------------------------------------
+    // [아티스트 후원 내역 조회]
+    // GET /artist/donations
+    // 수민 수정: 아티스트ID로 COMPLETED, DONATION인 내역만 취합
+    @GetMapping("/donations")
+    public ResponseEntity<ArtistDonationResponse> getDonations(
+            @RequestHeader(value = "x-user-id", required = false) Long artistId) {
+
+        if (artistId == null) {
+            log.error("헤더에 x-user-id가 안 왔어!");
+            return ResponseEntity.badRequest().build(); 
+        }
+        log.info("[ARTIST DONATION] 후원 내역 요청 - artistId: {}", artistId);
+        
+        // 🌟 요청하신 메소드 명 'artistDonation' 호출
+        ArtistDonationResponse response = artistSettlementService.artistDonation(artistId);
+        
+        return ResponseEntity.ok(response);
+    }
+    //-----------------------------------------------------------------------------------------------------------
 }
+

@@ -53,4 +53,15 @@ public interface ArtistLedgerRepository extends JpaRepository<Ledger, UUID> {
             @Param("artistId") Long artistId,
             @Param("startDateTime") OffsetDateTime startDateTime,
             @Param("endDateTime") OffsetDateTime endDateTime);
+
+
+     //-----------------------------------------------------------------------------------------------------------
+     // [아티스트 후원 내역 조회]
+     /** * [추가] 아티스트 후원 내역 필터링 조회 (JPA Query Method)
+     * - status: 'COMPLETED'
+     * - revenueType: 'DONATION'
+     */
+    List<Ledger> findByArtistIdAndStatusAndRevenueTypeOrderByCreatedAtDesc(
+            Long artistId, String status, String revenueType);
+    //-----------------------------------------------------------------------------------------------------------
 }
