@@ -26,6 +26,8 @@ import com.example.payment.dto.response.UserPaymentSummaryDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
 import com.example.payment.repository.LedgerRepository;
 import com.example.payment.repository.TransactionHistoryRepository;
+import com.example.payment.repository.MonthlyTrendRepository;
+import com.example.payment.dto.request.MonthlyTrendDTO;
 import com.example.settlement.service.SettlementService;
 import com.example.wallet.domain.Wallet;
 import com.example.wallet.dto.WalletDTO;
@@ -53,6 +55,8 @@ public class SettlementEventServiceImpl implements SettlementEventService {
     private final LedgerRepository ledgerRepository;
     private final WalletRepository walletRepository;
     private final TransactionHistoryRepository transactionHistoryRepository;
+    private final MonthlyTrendRepository monthlyTrendRepository;
+    
 
     /**
      * [관리자용 대시보드: 정산 통계 집계]
@@ -83,10 +87,16 @@ public class SettlementEventServiceImpl implements SettlementEventService {
             DashboardSummaryDTO summary = calculateDashboardSummary(ledgers);
             List<ArtistSettlementRowDTO> artistSettlements = calculateArtistSettlements(ledgers);
 
-            log.info(">>> [ADMIN_SETTLEMENT] 집계 완료 - OrderId: {}, 원장 수: {}건", orderId, ledgers.size());
+            // 4. 월별 트렌드 데이터 조회 (Sorted by Month)
+            List<MonthlyTrendDTO> monthlyTrend = monthlyTrendRepository.findAllByOrderByMonthAsc().stream()
+                .map(t -> new MonthlyTrendDTO(t.getMonth(), t.getTotalGross(), t.getTotalFee()))
+                .toList();
 
-            // 4. 응답 전송
-            AdminDashboardResponseDTO payload = new AdminDashboardResponseDTO(summary, artistSettlements);
+            log.info(">>> [ADMIN_SETTLEMENT] 집계 완료 - OrderId: {}, 원장 수: {}건, 트렌드: {}건", 
+                     orderId, ledgers.size(), monthlyTrend.size());
+
+            // 5. 응답 전송
+            AdminDashboardResponseDTO payload = new AdminDashboardResponseDTO(summary, artistSettlements, monthlyTrend);
             producer.sendDataResponse(replyKey, orderId, "COMPLETE", "대시보드 데이터 조회 및 집계 성공", dto.getType(), payload);
 
         } catch (Exception e) {

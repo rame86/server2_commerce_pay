@@ -16,10 +16,11 @@ public interface ArtistSettlementService {
      * 특정 아티스트의 누적 수익, 이번 달 예상 정산액, 정산 완료 건수 등을 집계함.
      * 프론트엔드 차트 렌더링을 위한 월별 수익 트렌드 및 수익 구성 비중 데이터를 포함함.
      * * @param artistId 조회 대상 아티스트 고유 식별자
+     * 
      * @return 요약 카드, 월별 추이, 수익 비중, 상세 내역이 포함된 통합 응답 객체
      */
     ArtistSettlementResponseDTO getSettlementDashboard(Long artistId);
-    
+
     // [아티스트 후원 내역 조회] 수민 수정
     ArtistDonationResponse artistDonation(Long artistId);
 }
