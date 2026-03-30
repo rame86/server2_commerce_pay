@@ -3,10 +3,13 @@ package com.example.payment.domain;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -21,29 +24,37 @@ import lombok.NoArgsConstructor;
  */
 @Entity
 @Getter
-@Table(name = "monthly_trends", schema = "settlement")
+@Table(name = "monthly_stats", schema = "settlement")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class MonthlyTrend {
 
-    /** 
-     * 월 (YYYY-MM 형식)
+    /** 고유 식별자 */
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    /** * 월 (YYYY-MM 형식)
      * 예: "2024-03"
      */
-    @Id
-    @Column(name = "month", nullable = false, length = 7)
+    @Column(name = "stat_month", nullable = false, unique = true, columnDefinition = "bpchar(7)")
     private String month;
 
     /** 월별 총 거래액 (Gross Amount 합계) */
-    @Column(name = "total_gross", nullable = false, precision = 19, scale = 2)
+    @Column(name = "total_gross_amount", nullable = false, precision = 20, scale = 4)
     @Builder.Default
     private BigDecimal totalGross = BigDecimal.ZERO;
 
     /** 월별 총 수수료 (Fee Amount 합계) */
-    @Column(name = "total_fee", nullable = false, precision = 19, scale = 2)
+    @Column(name = "total_fee_amount", nullable = false, precision = 20, scale = 4)
     @Builder.Default
     private BigDecimal totalFee = BigDecimal.ZERO;
+
+    /** 생성 시각 */
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private OffsetDateTime createdAt;
 
     /** 최종 업데이트 시각 */
     @UpdateTimestamp

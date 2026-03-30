@@ -125,7 +125,7 @@ public class SettlementServiceImpl implements SettlementService {
     private void updateMonthlyTrend(BigDecimal grossAmount, BigDecimal feeAmount) {
         String currentMonthStr = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
 
-        MonthlyTrend trend = monthlyTrendRepository.findById(currentMonthStr)
+        MonthlyTrend trend = monthlyTrendRepository.findByMonth(currentMonthStr)
                 .orElseGet(() -> {
                     log.info(">>> [SETTLEMENT] 새 월별 트렌드 생성 - Month: {}", currentMonthStr);
                     return MonthlyTrend.builder()
