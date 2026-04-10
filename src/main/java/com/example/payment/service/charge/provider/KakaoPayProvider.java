@@ -8,32 +8,33 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import com.example.config.KakaoPayProperties;
-import com.example.payment.domain.Charge;
-import com.example.payment.dto.response.ChargeReadyResponseDTO;
+import com.example.payment.dto.user.ChargeReadyResponseDTO;
+import com.example.payment.entity.Charge;
 
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * [카카오페이 결제 연동 구현체]
  * PaymentProvider 인터페이스의 카카오페이 전용 구현체로, 외부 API 통신을 담당함.
- * RestClient를 사용하여 선언적이고 효율적인 HTTP 요청을 수행함.
+ * RestClient를 사용 HTTP 요청을 수행함.
+ * @Component PaymentProvider 인터페이스의 구현체로 등록되어, ChargeServiceImpl에서 전략 패턴으로 활용됨.
  */
 @Slf4j
 @Component
 public class KakaoPayProvider implements PaymentProvider {
 
-    private final KakaoPayProperties properties;
-    private final RestClient restClient;
+    private final KakaoPayProperties properties; // 카카오페이 API 관련 설정 (CID, SecretKey, API Base URL 등)
+    private final RestClient restClient; // Spring의 RestClient를 사용하여 외부 API 통신을 수행하는 HTTP 클라이언트
 
     /**
      * [생성자 및 RestClient 초기화]
-     * 카카오페이 v1 API 규격에 따라 Secret Key 인증 헤더와 공통 설정을 주입함.
+     * 카카오페이 v1 API 규격에 따라 SecretKey 인증 헤더와 공통 설정을 주입함.
      */
     public KakaoPayProvider(KakaoPayProperties properties) {
         log.info(">>> [KAKAO_PAY_INIT] 카카오페이 프로바이더 초기화 시작");
-        this.properties = properties;
+        this.properties = properties; // 외부 설정에서 카카오페이 API 관련 프로퍼티 주입
 
-        this.restClient = RestClient.builder()
+        this.restClient = RestClient.builder() // RestClient 빌더를 사용하여 HTTP 클라이언트 구성
                 .baseUrl(properties.kakaoPayBaseUrl())
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 // 카카오페이 보안 인증: 'SECRET_KEY ' 접두사와 함께 발급받은 키를 헤더에 포함
@@ -55,7 +56,7 @@ public class KakaoPayProvider implements PaymentProvider {
     }
 
     /**
-     * [STEP 1: 결제 준비 (Ready API)]
+     * [STEP 1: 결제 준비 (Ready API) 호출]
      * 카카오페이 서버에 결제 정보를 등록하고, 결제창 진입을 위한 TID와 리다이렉트 URL을 발급받음.
      * @param charge   결제 요청 원장 엔티티
      * @param memberId 사용자 식별자
@@ -63,7 +64,7 @@ public class KakaoPayProvider implements PaymentProvider {
      * @return 발급된 TID와 결제창 URL을 포함한 응답 DTO
      */
     @Override
-    public ChargeReadyResponseDTO ready(Charge charge, Long memberId, String token) {
+    public ChargeReadyResponseDTO ready(Charge charge, Long memberId) {
         log.info(">>> [PAYMENT_READY] 카카오페이 준비 단계 진입 - ChargeId: {}, Amount: {}", 
                 charge.getChargeId(), charge.getAmount());
 
@@ -118,7 +119,7 @@ public class KakaoPayProvider implements PaymentProvider {
     }
 
     /**
-     * [STEP 2: 결제 승인 (Approve API)]
+     * [STEP 2: 결제 승인 (Approve API) 호출]
      * 사용자의 인증 결과물인 pg_token을 카카오페이 측에 전달하여 실제 결제를 확정함.
      * @param charge  TID가 포함된 결제 원장
      * @param pgToken 사용자 인증 후 발급된 성공 토큰

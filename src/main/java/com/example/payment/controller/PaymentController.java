@@ -15,13 +15,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.admin.dto.admin.response.UserDetailPaymentResponseDTO;
+import com.example.admin.service.UserDashboardService;
 import com.example.config.FrontendUrlProperties;
-import com.example.payment.dto.request.ChargeRequestDTO;
-import com.example.payment.dto.response.ChargeReadyResponseDTO;
-import com.example.payment.dto.response.PaymentHistoryResponseDTO;
-import com.example.payment.dto.response.UserDetailPaymentResponseDTO;
-import com.example.payment.service.UserDashboardService;
+import com.example.payment.dto.user.ChargeReadyResponseDTO;
+import com.example.payment.dto.user.ChargeRequestDTO;
+import com.example.payment.dto.user.PaymentHistoryResponseDTO;
 import com.example.payment.service.charge.ChargeService;
+import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,11 +37,16 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class PaymentController {
 
+    /**
+     * [상수 정의]
+     * 헤더 키 값을 컴파일 타임 상수로 관리하여 오타 방지 및 유지보수성 향상
+     */
     private static final String USER_ID_HEADER = "x-user-id";
     private static final String PARAM_PG_TOKEN = "pg_token";
     private static final String PARAM_CHARGE_ID = "chargeId";
 
-    private final ChargeService chargeService;    
+    private final ChargeService chargeService;
+    private final WalletService walletService;
     private final FrontendUrlProperties frontendUrl;
     private final UserDashboardService userDashboardService;
 
@@ -51,16 +57,30 @@ public class PaymentController {
     @GetMapping("/")
     public ResponseEntity<PaymentHistoryResponseDTO> getMyPayment(
             @RequestHeader(USER_ID_HEADER) Long memberId) {
-        
+
         log.info(">>> [MY_PAYMENT] 조회 요청 시작 - MemberId: {}", memberId);
-        PaymentHistoryResponseDTO response = chargeService.getPaymentHistory(memberId);
-        return ResponseEntity.ok(response);
+        
+        // 지갑이 존재하지 않는 신규 회원의 경우, 지갑을 자동으로 생성 후 결과를 반환함.
+        PaymentHistoryResponseDTO response = walletService.getPaymentHistory(memberId);
+        return ResponseEntity.ok(response); // 200 OK 응답과 함께 결제 내역 반환
+        /*
+         * ResponseEntity 란?
+         * HTTP 응답을 나타내는 클래스. 상태 코드, 헤더, 바디를 포함하여 클라이언트에게 반환할 수 있음.
+         */
+
     }
 
     /**
      * [결제 준비 요청]
-     * 사용자가 충전 금액을 입력하고 결제 버튼을 눌렀을 때 호출됨.
-     * PG사로부터 TID를 발급받고 결제창 URL을 반환함.
+     * 사용자가 충전 금액을 입력하고 결제 버튼을 눌렀을 때 호출되며, 다음 순서로 처리됨:
+     * 1. 내부 결제 원장 대기(PENDING) 상태로 생성
+     * 2. 외부 PG사와 통신하여 결제 고유 번호(TID) 발급
+     * 3. 클라이언트에게 결제창 URL 반환
+     * PG사로부터 응답받은 결제 페이지 URL을 클라이언트에 전달하여, 사용자가 결제 수단을 선택하고 인증할 수 있도록 유도하는 사전 준비 단계
+     * @param memberId   헤더에서 추출한 유저 식별자 (x-user-id)
+     * @param authHeader 헤더에서 추출한 인증 토큰 (Authorization)
+     * @param request    요청 바디 (결제 수단, 충전 요청 금액)
+     * @return ChargeReadyResponseDTO (내부 결제 ChargeId, PG사 TID, 프론트 리다이렉트 URL 포함)
      */
     @PostMapping("/charge")
     public ResponseEntity<ChargeReadyResponseDTO> chargePoint(
@@ -68,24 +88,28 @@ public class PaymentController {
             @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestBody ChargeRequestDTO request) {
 
-        log.info(">>> [CHARGE_READY] 충전 준비 요청 시작 - MemberId: {}, PayType: {}, Amount: {}", 
+        log.info(">>> [CHARGE_READY] 충전 준비 요청 시작 - MemberId: {}, PayType: {}, Amount: {}",
                 memberId, request.getPayType(), request.getAmount());
 
-        String token = "";
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            token = authHeader.substring(7);
-        }
+        // 내부 결제 원장 생성 및 PG사 TID 발급 (Service 계층 위임)
+        ChargeReadyResponseDTO response = chargeService.readyPayment(memberId, request);
 
-        ChargeReadyResponseDTO response = chargeService.readyPayment(memberId, request, token);
         log.info(">>> [CHARGE_READY] 준비 처리 완료 - ChargeId: {}, TID: {}", response.chargeId(), response.providerTid());
-        
+
         return ResponseEntity.ok(response);
     }
 
     /**
-     * [결제 승인 콜백]
-     * 사용자가 PG사 결제창에서 인증을 마치면 PG사가 호출하는 엔드포인트.
-     * 내부 승인 로직 완료 후 사용자를 서비스 완료 페이지로 리다이렉트함.
+     * [결제 승인 콜백 - 카카오페이]
+     * 사용자가 카카오페이 결제창에서 인증을 마치면 카카오 측에서 호출하는 엔드포인트로. 다음 순서로 처리됨:
+     * 1. PG사 인증 토큰(pg_token) 및 내부 식별자(chargeId) 수신
+     * 2. 외부 PG사 최종 승인 API 호출 및 포인트 적립 (Service 계층 위임)
+     * 3. 결제 완료 후 프론트엔드 결과 페이지로 리다이렉트
+     * 리다이랙트 시에도 게이트웨이의 auth.lua에서 사용자 인증이 수행되므로, chargeId와 memberId를 쿼리 파라미터 및 헤더로 전달하여 무결성을 확보함.
+      * @param pgToken  카카오페이 결제 승인 요청을 위한 인증 토큰 (pg_token)
+      * @param chargeId 내부 결제 원장 식별자 (결제 준비 요청 시 생성한 UUID)
+      * @param memberId 헤더에서 추출한 유저 식별자 (x-user-id)
+      * @return 성공 페이지로의 리다이렉트 응답
      */
     @GetMapping("/charge/kakaopay/success")
     public ResponseEntity<Void> approvePayment(
@@ -95,9 +119,11 @@ public class PaymentController {
 
         log.info(">>> [CHARGE_APPROVE] 승인 콜백 수신 - ChargeId: {}, MemberId: {}", chargeId, memberId);
 
+        // PG사 최종 승인 처리 (Service 계층 위임)
         chargeService.approvePayment(chargeId, pgToken, memberId);
 
         log.info(">>> [CHARGE_APPROVE] 최종 승인 성공 - 프론트엔드 리다이렉트 수행");
+
         return ResponseEntity.status(HttpStatus.FOUND)
                 .location(URI.create(frontendUrl.success()))
                 .build();
@@ -134,7 +160,7 @@ public class PaymentController {
     @GetMapping("/user-detail/{memberId}")
     public ResponseEntity<UserDetailPaymentResponseDTO> getUserDetail(
             @PathVariable(name = "memberId") Long memberId) {
-            
+
         log.info(">>> [USER_DETAIL] 대시보드 데이터 조회 요청 시작 - TargetMemberId: {}", memberId);
         UserDetailPaymentResponseDTO response = userDashboardService.getUserDashboardDetail(memberId);
         return ResponseEntity.ok(response);

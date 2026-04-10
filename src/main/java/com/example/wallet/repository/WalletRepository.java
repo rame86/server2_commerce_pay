@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.wallet.domain.Wallet;
+import com.example.wallet.entity.Wallet;
 
 /**
  * [지갑 도메인 레포지토리]

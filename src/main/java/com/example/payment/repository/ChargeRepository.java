@@ -5,7 +5,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.payment.domain.Charge;
+import com.example.payment.entity.Charge;
 
 /**
  * [결제 충전 레포지토리]

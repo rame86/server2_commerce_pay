@@ -10,11 +10,11 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.example.payment.domain.Ledger;
+import com.example.settlement.entity.Ledger;
 
 /**
  * Settlement 도메인 전용 레포지토리.
- * payment.domain.Ledger 엔티티를 직접 참조하여 새 쿼리를 추가
+ * payment.entity.Ledger 엔티티를 직접 참조하여 새 쿼리를 추가
  * (기존 payment 도메인의 LedgerRepository와 충돌 없이 별도로 운용)
  */
 @Repository

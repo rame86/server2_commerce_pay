@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * [지갑 서비스 컨트롤러]
  * 사용자의 지갑 연결 테스트 및 실시간 잔액 조회를 담당함.
- * 내부 서비스 간 통신(Internal Call) 및 게이트웨이를 통한 사용자 요청을 처리.
+ * 내부 서비스 간 통신(S2S) 및 게이트웨이를 통한 사용자 요청을 처리.
  */
 @Slf4j
 @RequestMapping("/wallet")
@@ -26,30 +26,41 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class WalletController {
 
+    /**
+     * [상수 정의]
+     * 헤더 키 값을 컴파일 타임 상수로 관리하여 오타 방지 및 유지보수성 향상
+     */
+    private static final String USER_ID_HEADER = "x-user-id";
+    private static final String USER_ROLE_HEADER = "x-role";
+    private static final String USER_NAME_HEADER = "x-user-name";
+
     private final WalletService walletService;
 
     /**
      * [지갑 서비스 연결 테스트]
      * 게이트웨이에서 전달된 헤더 정보를 확인하여 서비스 연결 상태를 점검함.
-     * @param userId 헤더에서 추출한 유저 ID
-     * @param role   헤더에서 추출한 권한 정보
-     * @param name   헤더에서 추출한 유저 이름
+     * 
+     * @param memberId   헤더에서 추출한 유저 ID
+     * @param memberRole 헤더에서 추출한 권한 정보
+     * @param memberName 헤더에서 추출한 유저 이름
      * @return 연결 확인 메시지
      */
     @GetMapping("/")
     public String getWallet(
-            @RequestHeader("x-user-id") Long userId,
-            @RequestHeader("x-role") String role,
-            @RequestHeader("x-user-name") String name) {
+            @RequestHeader(USER_ID_HEADER) Long memberId,
+            @RequestHeader(USER_ROLE_HEADER) String memberRole,
+            @RequestHeader(USER_NAME_HEADER) String memberName) {
 
-        log.info(">>> [WALLET_TEST] 지갑 연결 확인 요청 - UserId: {}, Role: {}, Name: {}", userId, role, name);
+        log.info(">>> [WALLET_TEST] 지갑 연결 확인 요청 - UserId: {}, Role: {}, Name: {}", memberId, memberRole, memberName);
 
-        return "WalletController/wallet/ : " + userId + " " + role + " " + name + "님의 /wallet/ 요청받음";
+        return "WalletController/wallet/ : " + memberId + " " + memberRole + " " + memberName + "님의 /wallet/ 요청받음";
     }
 
     /**
      * [실시간 잔액 조회]
      * 로그인 시 Core 서비스에서 호출하여 Redis에 등록할 최신 잔액 데이터를 제공함.
+     * 헤더가 포함되지 않는 관리자 페이지에서의 호출도 고려하여 memberId를 RequestParam으로 받음.
+     * 화이트 리스트에 등록된 IP만 접근가능하도록 auth.lua에서 접근 원천 차단.
      * @param memberId 잔액을 조회할 회원 식별자
      * @return 해당 회원의 실시간 지갑 잔액 (BigDecimal)
      */
@@ -57,10 +68,16 @@ public class WalletController {
     public ResponseEntity<BigDecimal> getBalance(@RequestParam("member_id") Long memberId) {
         log.info(">>> [BALANCE_FETCH] 실시간 잔액 조회 요청 시작 - MemberId: {}", memberId);
 
-        // [Self-Review] memberId 유효성 검증 로직 추가 가능 (비어있거나 잘못된 형식인지 확인)
+        // memberId가 존재하는지 검증
+        if (memberId == null) {
+            log.warn(">>> [BALANCE_FETCH] memberId 누락 - MemberId: {}", memberId);
+            return ResponseEntity.badRequest().build();
+        }
+
         BigDecimal balance = walletService.getBalance(memberId);
 
-        log.info(">>> [BALANCE_FETCH] 잔액 조회 성공 - MemberId: {}, Balance: {}", memberId, balance);
+        log.info(">>> [BALANCE_FETCH] 잔액 조회 성공 - MemberId: {}, Balance: {}",
+                memberId, balance);
         return ResponseEntity.ok(balance);
     }
 

@@ -2,132 +2,127 @@
 package com.example.payment.service.Event;
 
 import java.math.BigDecimal;
+import java.util.concurrent.Callable;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
-import com.example.payment.dto.event.PaymentEventDTO;
+import com.example.payment.dto.event.PaymentEventRequestDTO;
+import com.example.payment.dto.event.PaymentEventResponseDTO;
 import com.example.payment.messaging.producer.PaymentEventProducer;
-import com.example.settlement.service.SettlementService;
-import com.example.wallet.service.WalletService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * [결제 이벤트 처리 서비스 구현체]
- * 트랜잭션과 외부 메시징 발송을 분리하여 안정적인 비동기 처리를 수행함.
+ * [결제 이벤트 제어 (Saga 패턴)]
+ * 메시지 큐(RabbitMQ)로부터 수신된 이벤트를 기반으로 결제/환불/후원제어.
+ * 실질적인 비즈니스 트랜잭션(지갑 차감, 정산 기록)은 PaymentBusinessService로 위임.
+ * 이벤트 상태 추적(PENDING -> COMPLETE/FAIL)과 보상 트랜잭션 유도를 위한 메시지 발송 전담.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentEventServiceImpl implements PaymentEventService {
 
-    private final WalletService walletService;
     private final PaymentEventProducer producer;
-    private final SettlementService settlementService;
+    private final TransactionEventService transactionEventService;
+    private final PaymentBusinessService businessService;
 
-    /** * [자기 참조(Self-Injection)]
-     * 내부 메서드 호출 시 프록시 객체를 통해 @Transactional(REQUIRES_NEW)이 
-     * 정상적으로 작동하도록 함. (@Lazy로 순환 참조 방지)
+    /**
+     * [결제 이벤트 처리]
+     * 결제 요청 시 데이터 정합성을 검증하고 결제 비즈니스 로직 호출.
      */
-    @Lazy
-    @Autowired
-    private PaymentEventServiceImpl self;
-
     @Override
-    public void processPaymentEvent(PaymentEventDTO dto) {
-        log.info(">>> [PAYMENT] 결제 처리 시작: {}", dto.getOrderId());
+    public void processPaymentEvent(PaymentEventRequestDTO dto) {
+        log.info(">>> [PAYMENT_EVENT] 결제 요청 처리: {}", dto.getOrderId());
+
+        // 수수료 정보가 누락된 경우 기본값(0)으로 보정하여 하위 로직의 NPE 방지
         if (dto.getFee() == null) {
-            log.error("수수료 정보가 없습니다. 주문번호: {}", dto.getOrderId());
-            return;
+            log.warn(">>> [PAYMENT_EVENT:FEE_NULL] 수수료 정보 누락 - OrderId: {}",
+                    dto.getOrderId());
+
+            dto.setFee(BigDecimal.ZERO);
         }
 
-        executeWithStatusUpdate(dto, "COMPLETE", "결제 성공", () -> {
-            walletService.processPayment(dto); // 지갑 잔액 차감 및 이력 생성
-            settlementService.processSettlement(dto); // 정산 데이터 생성
-            return null;
-        });
+        // 템플릿 콜백을 통해 독립 트랜잭션 로직 전달 및 상태 업데이트 수행
+        executeWithStatusUpdate(dto, "COMPLETE", "결제 성공",
+                () -> businessService.executePaymentLogic(dto));
     }
 
+    /**
+     * [환불 이벤트 처리]
+     * 결제 취소 요청 시 기존 거래 원장을 기반으로 환불 로직 호출.
+     */
     @Override
-    public void processRefundEvent(PaymentEventDTO dto) {
-        log.info(">>> [REFUNDED] 환불 처리 시작: {}", dto.getOrderId());
+    public void processRefundEvent(PaymentEventRequestDTO dto) {
+        log.info(">>> [REFUND_EVENT] 환불 요청 처리: {}", dto.getOrderId());
 
-        executeWithStatusUpdate(dto, "REFUNDED", "환불 성공", () -> {
-            walletService.processRefund(dto); // 지갑 잔액 복구
-            settlementService.processSettlement(dto); // 정산 원장 취소 처리
-            return null;
-        });
+        // 템플릿 콜백을 통해 환불 독립 트랜잭션 로직 전달
+        executeWithStatusUpdate(dto, "REFUNDED", "환불 성공",
+                () -> businessService.executeRefundLogic(dto));
     }
 
+    /**
+     * [후원 이벤트 처리]
+     * 팬 커뮤니티 플랫폼 정책에 맞추어 후원 시 고정 수수료를 적용한 결제 로직을 호출.
+     */
     @Override
-    public void processDonationEvent(PaymentEventDTO dto) {
-        log.info(">>> [DONATION] 후원 처리 시작: {}", dto.getOrderId());
-        // 후원 전용 정책 적용 (수수료 고정 등)
+    public void processDonationEvent(PaymentEventRequestDTO dto) {
+        log.info(">>> [DONATION_EVENT] 후원 요청 처리: {}", dto.getOrderId());
+
+        // 커뮤니티 정책: 수수료 20% 고정 및 원결제금액 세팅
         dto.setFee(BigDecimal.valueOf(20));
         dto.setOriginalPrice(dto.getAmount());
 
-        executeWithStatusUpdate(dto, "COMPLETE", "후원 성공", () -> {
-            walletService.processPayment(dto);
-            settlementService.processSettlement(dto);
-            return null;
-        });
-    }
-
-    @Override
-    public void processArtistSettlementRequest(PaymentEventDTO dto) {
-        log.info(">>> [SETTLEMENT] 아티스트 정산 요청 처리 시작: {}", dto.getArtistId());
-        // 아티스트 정산 요청 비즈니스 로직 구현 예정
-    }
-
-    @Override
-    @Transactional
-    public void processArtistWalletCreate(PaymentEventDTO dto) {
-        log.info(">>> [ARTIST_APPROVE] 아티스트 지갑 생성: {}", dto.getArtistName());
-        // 아티스트 계좌(ArtistAccount) 초기화 로직
+        // 후원도 일반 결제와 동일한 트랜잭션 로직(차감 및 정산)을 재사용
+        executeWithStatusUpdate(dto, "COMPLETE", "후원 성공",
+                () -> businessService.executePaymentLogic(dto));
     }
 
     /**
-     * [이벤트 처리 공통 템플릿 메서드]
-     * 1. 비즈니스 로직을 별도의 독립 트랜잭션(REQUIRES_NEW)으로 실행.
-     * 2. DB 트랜잭션이 완료(커밋/롤백)된 후 MQ 응답을 발송함.
-     * 3. 이를 통해 MQ 발송 실패가 DB 롤백을 유발하거나, 롤백 후 잘못된 성공 메시지가 나가는 것을 방지.
+     * [이벤트 처리 공통 템플릿 (Saga 상태 관리 핵심)]
+     * 분산 시스템의 데이터 정합성을 위해 비즈니스 흐름을 다음 4단계를 거쳐 제어:
+     * 1. PENDING 기록: 로직 시작 전 DB에 기록을 남김 (유실 방지).
+     * 2. 로직 실행: 비즈니스 서비스를 통해 완전 새로운 독립 트랜잭션(REQUIRES_NEW)으로 격리 실행.
+     * 3. 결과 반영: 성공 시 COMPLETE, 실패 시 FAIL로 상태 업데이트.
+     * 4. MQ 발송: 처리 결과에 따라 주문 서비스로 완료 또는 보상 트랜잭션 유도 메시지 발송.
      */
-    private void executeWithStatusUpdate(PaymentEventDTO dto, String successStatus, String successMsg,
-            java.util.concurrent.Callable<Void> businessLogic) {
-        log.info(">>> [TEMPLATE] 이벤트 처리 템플릿 시작 - Type: {}, OrderId: {}", dto.getType(), dto.getOrderId());
-        
-        String replyKey = dto.getReplyRoutingKey();
-        String orderId = dto.getOrderId();
+    private <T> void executeWithStatusUpdate(PaymentEventRequestDTO dto, String successStatus,
+            String successMsg, Callable<T> businessLogic) {
+
         String type = dto.getType();
+        String orderId = dto.getOrderId();
+        String replyKey = dto.getReplyRoutingKey();
 
         try {
-            // [독립 트랜잭션 실행] 실패 시 이 메서드 내부만 롤백됨
-            self.executeBusinessLogic(businessLogic);
+            // STEP 1: 이벤트 수신 즉시 초기 상태 기록 (무조건 커밋하여 추적 가능하게 함)
+            transactionEventService.createPendingEvent(dto);
 
-            // [성공 시 MQ 발송] 트랜잭션 바깥이므로 안전하게 실행
-            producer.sendDataResponse(replyKey, orderId, successStatus, successMsg, type, null);
-            log.info("[{}] 처리 완료 - 주문번호: {}", type, orderId);
+            // STEP 2: 실제 비즈니스 로직 실행 (PaymentBusinessService에서 물리적으로 분리된 트랜잭션)
+            T payload = businessLogic.call();
+            
+            // STEP 3: 비즈니스 트랜잭션 정상 종료 시 해당 이벤트를 완료 상태로 업데이트
+            transactionEventService.updateEventStatus(orderId, successStatus);
+
+            // STEP 4: 최종 성공 데이터(payload)를 담아 응답 큐로 메시지 발행
+            PaymentEventResponseDTO<T> responseDTO = new PaymentEventResponseDTO<>(
+                    orderId, successStatus, successMsg, type, payload);
+            producer.sendMessage(replyKey, responseDTO);
+
+            log.info(">>> [EVENT:SUCCESS] 처리 완료 - Type: {}, OrderId: {}",
+                    type, orderId);
 
         } catch (Exception e) {
-            // [실패 시 MQ 발송] 트랜잭션은 이미 롤백된 상태에서 에러 응답 전송
-            log.error("[{}] 처리 실패 - 주문번호: {}, 사유: {}", dto.getType(), dto.getOrderId(), e.getMessage());
-            producer.sendDataResponse(replyKey, orderId, "FAIL", e.getMessage(), "ERROR", null);
-        }
-    }
+            log.error(">>> [EVENT:FAIL] 처리 오류 발생 - OrderId: {}, 사유: {}",
+                    orderId, e.getMessage());
 
-    /**
-     * [비즈니스 로직 격리 실행]
-     * Propagation.REQUIRES_NEW: 호출 측과 무관하게 새로운 트랜잭션을 시작함.
-     * 로직 실패 시 해당 트랜잭션만 즉시 롤백하여 데이터 일관성을 유지함.
-     */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void executeBusinessLogic(java.util.concurrent.Callable<Void> logic) throws Exception {
-        log.info(">>> [BUSINESS_LOGIC] 독립 트랜잭션 비즈니스 로직 실행 시작");
-        logic.call();
+            // STEP 3-E: 비즈니스 로직 예외 발생 시, 해당 트랜잭션은 롤백되더라도 이벤트 상태는 FAIL로 기록
+            transactionEventService.updateEventStatus(orderId, "FAIL");
+
+            // STEP 4-E: 실패 메시지 발송 (주문 서비스 등 호출 측에서 보상 트랜잭션을 수행할 수 있도록 알림)
+            PaymentEventResponseDTO<Void> errorDTO = new PaymentEventResponseDTO<>(
+                    orderId, "FAIL", e.getMessage(), "ERROR", null);
+            producer.sendMessage(replyKey, errorDTO);
+        }
     }
 }

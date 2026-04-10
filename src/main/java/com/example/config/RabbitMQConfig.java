@@ -77,7 +77,7 @@ public class RabbitMQConfig {
     /**
      * [메시지 컨버터 설정]
      * 객체를 JSON으로 직렬화/역직렬화함.
-     * Java 객체를 메시지로 보낼 때 자동으로 JSON 문자열로 변환하여 언어가 다른 서비스 간의 통신 호환성을 확보함.
+     * Java 객체를 메시지로 보낼 때 자동으로 JSON 문자열로 변환하여 언어가 다른 서비스 간의 통신 호환성을 확보.
      */
     @Bean
     public Jackson2JsonMessageConverter messageConverter() {

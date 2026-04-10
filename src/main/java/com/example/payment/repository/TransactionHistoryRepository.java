@@ -6,7 +6,7 @@ import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.payment.domain.TransactionHistory;
+import com.example.payment.entity.TransactionHistory;
 
 /**
  * [거래 이력 레포지토리]

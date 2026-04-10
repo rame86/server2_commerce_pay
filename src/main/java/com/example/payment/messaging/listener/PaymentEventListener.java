@@ -4,10 +4,11 @@ package com.example.payment.messaging.listener;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Service;
 
+import com.example.admin.service.AdminSettlementEventService;
 import com.example.config.RabbitMQConfig;
-import com.example.payment.dto.event.PaymentEventDTO;
+import com.example.payment.dto.event.PaymentEventRequestDTO;
 import com.example.payment.service.Event.PaymentEventService;
-import com.example.payment.service.Event.SettlementEventService;
+import com.example.settlement.service.ArtistPayoutService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,14 +23,15 @@ import lombok.extern.slf4j.Slf4j;
 public class PaymentEventListener {
 
     private final PaymentEventService paymentService;
-    private final SettlementEventService settlementEventService;
+    private final AdminSettlementEventService settlementEventService;
+    private final ArtistPayoutService ArtistSettlementService;
 
     /**
      * [메시지 수신 및 라우팅]
      * RabbitMQ 큐에서 PaymentEventDTO를 수신하여 타입에 따라 분기 처리함.
      */
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME)
-    public void receiveMessage(PaymentEventDTO dto) {
+    public void receiveMessage(PaymentEventRequestDTO dto) {
         log.info(">>> [MQ_RECEIVE] 메시지 수신 및 라우팅 시작 - Type: {}, OrderId: {}, ReplyKey: {}", 
                 dto.getType(), dto.getOrderId(), dto.getReplyRoutingKey());
 
@@ -39,19 +41,20 @@ public class PaymentEventListener {
             dto.setQuantity(1);
         }
 
-        // [이벤트 타입별 분기] 직접적인 비즈니스 로직은 호출 서비스로 위임
+        // 메시지 타입에 따른 서비스 레이어 라우팅        
+        // 직접적인 비즈니스 로직은 화살표레이블 스위치표현식을 이용해 호출 서비스로 위임 (결제, 환불, 후원, 아티스트 정산, 관리자 기능 등)
         switch (dto.getType()) {
-            case "PAYMENT" -> paymentService.processPaymentEvent(dto);      // 결제 승인
-            case "REFUND" -> paymentService.processRefundEvent(dto);         // 환불 처리
-            case "DONATION" -> paymentService.processDonationEvent(dto);    // 후원 처리
+            case "PAYMENT" -> paymentService.processPaymentEvent(dto);      // 결제 요청
+            case "REFUND" -> paymentService.processRefundEvent(dto);        // 환불 요청
+            case "DONATION" -> paymentService.processDonationEvent(dto);    // 후원 결제 요청
+
+            // 아티스트 정산 및 지갑 관련 라우팅
+            case "ARTIST_SETTLEMENT_REQUEST" -> ArtistSettlementService.processArtistSettlementRequest(dto);
+            case "ARTIST_APPROVE" -> ArtistSettlementService.processArtistWalletCreate(dto);
 
             // 관리자 및 통계 관련 라우팅
             case "ADMIN" -> handleAdminRequest(dto);                        // 관리자 기능 분기 호출
             case "ADMIN_SETTLEMENT" -> settlementEventService.processAdminSettlement(dto);
-
-            // 아티스트 정산 및 지갑 관련 라우팅
-            case "ARTIST_SETTLEMENT_REQUEST" -> paymentService.processArtistSettlementRequest(dto);
-            case "ARTIST_APPROVE" -> paymentService.processArtistWalletCreate(dto);
 
             default -> log.error(">>> [MQ_ERROR] 지원하지 않는 메시지 타입: {}", dto.getType());
         }
@@ -61,7 +64,7 @@ public class PaymentEventListener {
      * [관리자 요청 상세 라우팅]
      * 'ADMIN' 타입 메시지의 orderId 필드를 액션(Action) 구분자로 사용하여 상세 기능 수행.
      */
-    private void handleAdminRequest(PaymentEventDTO dto) {
+    private void handleAdminRequest(PaymentEventRequestDTO dto) {
         String action = dto.getOrderId(); // 관리자 요청에서는 orderId를 기능 구분값으로 활용
         log.info(">>> [ADMIN_ROUTING] 관리자 상세 요청 라우팅 시작 - Action: {}, OrderId: {}", action, dto.getOrderId());
         
